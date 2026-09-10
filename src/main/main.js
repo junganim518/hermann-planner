@@ -29,6 +29,8 @@ function ensureDefaultAutoStart() {
 }
 
 function createWindow() {
+  if (mainWindow) return;
+
   const mainWindowState = windowStateKeeper({
     defaultWidth: 800,
     defaultHeight: 500,
@@ -64,12 +66,21 @@ function createWindow() {
       mainWindow.hide();
     }
   });
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
 }
 
 function showMainWindow() {
-  if (!mainWindow) return;
+  if (!mainWindow) {
+    createWindow();
+    return;
+  }
+  if (mainWindow.isMinimized()) mainWindow.restore();
   mainWindow.show();
   mainWindow.focus();
+  app.focus({ steal: true });
 }
 
 function buildTrayMenu() {
@@ -97,6 +108,8 @@ function buildTrayMenu() {
 }
 
 function createTray() {
+  if (tray) return;
+
   const trayIcon = nativeImage.createFromPath(path.join(__dirname, '../../assets/tray.png'));
   tray = new Tray(trayIcon);
   tray.setToolTip('Hermann Planner');
@@ -104,56 +117,66 @@ function createTray() {
   tray.on('click', () => showMainWindow());
 }
 
-ipcMain.handle('auth:login', async () => {
-  authClient = await getAuthorizedClient();
-  return { loggedIn: true };
-});
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
 
-ipcMain.handle('auth:logout', async () => {
-  logout();
-  authClient = null;
-  return { loggedIn: false };
-});
-
-ipcMain.handle('auth:status', async () => {
-  return { loggedIn: isLoggedIn() };
-});
-
-ipcMain.handle('calendar:list', async (event, timeMin, timeMax) => {
-  if (!authClient) authClient = await getAuthorizedClient();
-  return listEvents(authClient, timeMin, timeMax);
-});
-
-ipcMain.handle('tasks:list', async () => {
-  if (!authClient) authClient = await getAuthorizedClient();
-  return listTasks(authClient);
-});
-
-ipcMain.handle('tasks:setCompletion', async (event, taskListId, taskId, completed) => {
-  if (!authClient) authClient = await getAuthorizedClient();
-  return setTaskCompletion(authClient, taskListId, taskId, completed);
-});
-
-ipcMain.on('widget:close', () => {
-  app.isQuitting = true;
+if (!gotSingleInstanceLock) {
   app.quit();
-});
-
-ipcMain.on('widget:minimizeToTray', () => {
-  mainWindow.hide();
-});
-
-app.whenReady().then(() => {
-  ensureDefaultAutoStart();
-  createWindow();
-  createTray();
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+} else {
+  app.on('second-instance', () => {
+    showMainWindow();
   });
-});
 
-app.on('window-all-closed', () => {
-  // Keep the app alive in the tray on Windows/Linux instead of quitting.
-  if (process.platform !== 'darwin' && app.isQuitting) app.quit();
-});
+  ipcMain.handle('auth:login', async () => {
+    authClient = await getAuthorizedClient();
+    return { loggedIn: true };
+  });
+
+  ipcMain.handle('auth:logout', async () => {
+    logout();
+    authClient = null;
+    return { loggedIn: false };
+  });
+
+  ipcMain.handle('auth:status', async () => {
+    return { loggedIn: isLoggedIn() };
+  });
+
+  ipcMain.handle('calendar:list', async (event, timeMin, timeMax) => {
+    if (!authClient) authClient = await getAuthorizedClient();
+    return listEvents(authClient, timeMin, timeMax);
+  });
+
+  ipcMain.handle('tasks:list', async () => {
+    if (!authClient) authClient = await getAuthorizedClient();
+    return listTasks(authClient);
+  });
+
+  ipcMain.handle('tasks:setCompletion', async (event, taskListId, taskId, completed) => {
+    if (!authClient) authClient = await getAuthorizedClient();
+    return setTaskCompletion(authClient, taskListId, taskId, completed);
+  });
+
+  ipcMain.on('widget:close', () => {
+    app.isQuitting = true;
+    app.quit();
+  });
+
+  ipcMain.on('widget:minimizeToTray', () => {
+    mainWindow.hide();
+  });
+
+  app.whenReady().then(() => {
+    ensureDefaultAutoStart();
+    createWindow();
+    createTray();
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  });
+
+  app.on('window-all-closed', () => {
+    // Keep the app alive in the tray on Windows/Linux instead of quitting.
+    if (process.platform !== 'darwin' && app.isQuitting) app.quit();
+  });
+}
