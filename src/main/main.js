@@ -1,10 +1,10 @@
 const path = require('path');
-const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, shell } = require('electron');
 const windowStateKeeper = require('electron-window-state');
 const Store = require('electron-store');
 const { getAuthorizedClient, isLoggedIn, logout } = require('../auth/googleAuth');
 const { listEvents } = require('../auth/calendarService');
-const { listTasks, setTaskCompletion } = require('../auth/tasksService');
+const { listTasks, setTaskCompletion, createTask, deleteTask } = require('../auth/tasksService');
 
 const store = new Store();
 
@@ -154,6 +154,20 @@ if (!gotSingleInstanceLock) {
   ipcMain.handle('tasks:setCompletion', async (event, taskListId, taskId, completed) => {
     if (!authClient) authClient = await getAuthorizedClient();
     return setTaskCompletion(authClient, taskListId, taskId, completed);
+  });
+
+  ipcMain.handle('tasks:create', async (event, title) => {
+    if (!authClient) authClient = await getAuthorizedClient();
+    return createTask(authClient, title);
+  });
+
+  ipcMain.handle('tasks:delete', async (event, taskListId, taskId) => {
+    if (!authClient) authClient = await getAuthorizedClient();
+    return deleteTask(authClient, taskListId, taskId);
+  });
+
+  ipcMain.on('calendar:openNewEvent', () => {
+    shell.openExternal('https://calendar.google.com/calendar/u/0/r/eventedit');
   });
 
   ipcMain.on('widget:close', () => {

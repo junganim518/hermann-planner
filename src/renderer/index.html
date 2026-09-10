@@ -24,9 +24,12 @@
     <main id="content">
       <section id="pane-calendar">
         <div id="month-nav">
-          <button id="btn-prev-month" title="이전 달">◀</button>
-          <span id="month-label"></span>
-          <button id="btn-next-month" title="다음 달">▶</button>
+          <div id="month-nav-left">
+            <button id="btn-prev-month" title="이전 달">◀</button>
+            <span id="month-label"></span>
+            <button id="btn-next-month" title="다음 달">▶</button>
+          </div>
+          <button id="btn-add-event" title="Google 캘린더에서 새 일정 만들기">+ 일정 추가</button>
         </div>
         <div class="weekday-row">
           <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
@@ -36,6 +39,9 @@
 
       <section id="pane-tasks">
         <h2 class="pane-title">할일</h2>
+        <div id="task-input-row">
+          <input id="new-task-input" type="text" placeholder="할일 추가" />
+        </div>
         <div id="tasks-list" class="scroll-list">
           <p class="empty-message">로그인 후 할일이 표시됩니다.</p>
         </div>

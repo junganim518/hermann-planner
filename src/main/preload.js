@@ -9,6 +9,10 @@ contextBridge.exposeInMainWorld('hermannAPI', {
   getTasks: () => ipcRenderer.invoke('tasks:list'),
   setTaskCompletion: (taskListId, taskId, completed) =>
     ipcRenderer.invoke('tasks:setCompletion', taskListId, taskId, completed),
+  createTask: (title) => ipcRenderer.invoke('tasks:create', title),
+  deleteTask: (taskListId, taskId) => ipcRenderer.invoke('tasks:delete', taskListId, taskId),
+
+  openNewEvent: () => ipcRenderer.send('calendar:openNewEvent'),
 
   closeWidget: () => ipcRenderer.send('widget:close'),
   minimizeToTray: () => ipcRenderer.send('widget:minimizeToTray'),

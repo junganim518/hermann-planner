@@ -130,6 +130,13 @@ html, body {
   padding: 8px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
+  gap: 8px;
+}
+
+#month-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 #month-nav button {
@@ -144,6 +151,13 @@ html, body {
 
 #month-nav button:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+#btn-add-event {
+  width: auto !important;
+  padding: 0 8px;
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 #month-label {
@@ -232,6 +246,31 @@ html, body {
   margin-top: 20px;
 }
 
+#task-input-row {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+#new-task-input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #f2f2f5;
+  font-size: 12px;
+}
+
+#new-task-input::placeholder {
+  color: #8a8d9a;
+}
+
+#new-task-input:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
 .task-item {
   display: flex;
   align-items: flex-start;
@@ -253,4 +292,62 @@ html, body {
 .task-item input[type="checkbox"] {
   margin-top: 3px;
   cursor: pointer;
+}
+
+.task-delete-btn {
+  border: none;
+  background: transparent;
+  color: #8a8d9a;
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+.task-item:hover .task-delete-btn {
+  opacity: 1;
+}
+
+.task-delete-btn:hover {
+  background: rgba(229, 72, 77, 0.2);
+  color: #e5484d;
+}
+
+.task-delete-btn.confirm {
+  opacity: 1;
+  color: #e5484d;
+  font-size: 10px;
+}
+
+.completed-section {
+  margin-top: 4px;
+}
+
+.completed-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: #b9bcc9;
+  font-size: 11px;
+  padding: 6px 4px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.completed-toggle:hover {
+  color: #f2f2f5;
+}
+
+.completed-arrow {
+  display: inline-block;
+  width: 10px;
+}
+
+.completed-list.collapsed {
+  display: none;
 }

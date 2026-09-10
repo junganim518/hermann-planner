@@ -21,7 +21,7 @@ async function listTasks(authClient) {
 
 async function setTaskCompletion(authClient, taskListId, taskId, completed) {
   const tasksApi = google.tasks({ version: 'v1', auth: authClient });
-  return tasksApi.tasks.patch({
+  await tasksApi.tasks.patch({
     tasklist: taskListId,
     task: taskId,
     requestBody: {
@@ -30,4 +30,18 @@ async function setTaskCompletion(authClient, taskListId, taskId, completed) {
   });
 }
 
-module.exports = { listTasks, setTaskCompletion };
+async function createTask(authClient, title) {
+  const tasksApi = google.tasks({ version: 'v1', auth: authClient });
+  const res = await tasksApi.tasks.insert({
+    tasklist: '@default',
+    requestBody: { title },
+  });
+  return { ...res.data, taskListId: '@default' };
+}
+
+async function deleteTask(authClient, taskListId, taskId) {
+  const tasksApi = google.tasks({ version: 'v1', auth: authClient });
+  await tasksApi.tasks.delete({ tasklist: taskListId, task: taskId });
+}
+
+module.exports = { listTasks, setTaskCompletion, createTask, deleteTask };

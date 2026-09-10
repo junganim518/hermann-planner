@@ -8,10 +8,15 @@ const btnPrevMonth = document.getElementById('btn-prev-month');
 const btnNextMonth = document.getElementById('btn-next-month');
 const daysGrid = document.getElementById('days-grid');
 const tasksList = document.getElementById('tasks-list');
+const newTaskInput = document.getElementById('new-task-input');
+const btnAddEvent = document.getElementById('btn-add-event');
 
 let currentMonth = new Date();
 currentMonth.setDate(1);
 currentMonth.setHours(0, 0, 0, 0);
+
+let completedExpanded = false;
+let cachedTasks = [];
 
 function setAuthUI(loggedIn) {
   btnLogin.classList.toggle('hidden', loggedIn);
@@ -104,31 +109,97 @@ function renderMonthGrid(monthDate, events) {
   }
 }
 
+function createTaskItem(task) {
+  const completed = task.status === 'completed';
+  const item = document.createElement('div');
+  item.className = 'task-item';
+  const checkbox = document.createElement('input');
+  checkbox.type = 'checkbox';
+  checkbox.checked = completed;
+  checkbox.addEventListener('change', async () => {
+    await window.hermannAPI.setTaskCompletion(task.taskListId, task.id, checkbox.checked);
+    loadTasks();
+  });
+
+  const title = document.createElement('span');
+  title.className = 'task-title' + (completed ? ' completed' : '');
+  title.textContent = task.title || '(제목 없음)';
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.type = 'button';
+  deleteBtn.className = 'task-delete-btn';
+  deleteBtn.title = '삭제';
+  deleteBtn.textContent = '🗑';
+  deleteBtn.addEventListener('click', async () => {
+    if (deleteBtn.classList.contains('confirm')) {
+      clearTimeout(deleteBtn._resetTimer);
+      try {
+        await window.hermannAPI.deleteTask(task.taskListId, task.id);
+        cachedTasks = cachedTasks.filter((t) => t.id !== task.id);
+        renderTasks(cachedTasks);
+      } catch (err) {
+        loadTasks();
+      }
+      return;
+    }
+    deleteBtn.classList.add('confirm');
+    deleteBtn.textContent = '확인?';
+    deleteBtn._resetTimer = setTimeout(() => {
+      deleteBtn.classList.remove('confirm');
+      deleteBtn.textContent = '🗑';
+    }, 3000);
+  });
+
+  item.appendChild(checkbox);
+  item.appendChild(title);
+  item.appendChild(deleteBtn);
+  return item;
+}
+
 function renderTasks(tasks) {
   tasksList.innerHTML = '';
-  if (!tasks.length) {
+
+  const activeTasks = tasks.filter((task) => task.status !== 'completed');
+  const completedTasks = tasks.filter((task) => task.status === 'completed');
+
+  if (!activeTasks.length && !completedTasks.length) {
     tasksList.innerHTML = '<p class="empty-message">할일이 없습니다.</p>';
     return;
   }
-  for (const task of tasks) {
-    const completed = task.status === 'completed';
-    const item = document.createElement('div');
-    item.className = 'task-item';
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.checked = completed;
-    checkbox.addEventListener('change', async () => {
-      await window.hermannAPI.setTaskCompletion(task.taskListId, task.id, checkbox.checked);
-      loadTasks();
+
+  if (!activeTasks.length) {
+    const empty = document.createElement('p');
+    empty.className = 'empty-message';
+    empty.textContent = '할일이 없습니다.';
+    tasksList.appendChild(empty);
+  } else {
+    for (const task of activeTasks) {
+      tasksList.appendChild(createTaskItem(task));
+    }
+  }
+
+  if (completedTasks.length) {
+    const section = document.createElement('div');
+    section.className = 'completed-section';
+
+    const header = document.createElement('button');
+    header.type = 'button';
+    header.className = 'completed-toggle';
+    header.innerHTML = `<span class="completed-arrow">${completedExpanded ? '▾' : '▸'}</span> 완료됨 (${completedTasks.length})`;
+    header.addEventListener('click', () => {
+      completedExpanded = !completedExpanded;
+      renderTasks(tasks);
     });
+    section.appendChild(header);
 
-    const title = document.createElement('span');
-    title.className = 'task-title' + (completed ? ' completed' : '');
-    title.textContent = task.title || '(제목 없음)';
+    const list = document.createElement('div');
+    list.className = 'completed-list' + (completedExpanded ? '' : ' collapsed');
+    for (const task of completedTasks) {
+      list.appendChild(createTaskItem(task));
+    }
+    section.appendChild(list);
 
-    item.appendChild(checkbox);
-    item.appendChild(title);
-    tasksList.appendChild(item);
+    tasksList.appendChild(section);
   }
 }
 
@@ -145,11 +216,17 @@ async function loadEvents() {
   }
 }
 
+let tasksRequestId = 0;
+
 async function loadTasks() {
+  const requestId = ++tasksRequestId;
   try {
     const tasks = await window.hermannAPI.getTasks();
-    renderTasks(tasks);
+    if (requestId !== tasksRequestId) return; // a newer loadTasks() call superseded this one
+    cachedTasks = tasks;
+    renderTasks(cachedTasks);
   } catch (err) {
+    if (requestId !== tasksRequestId) return;
     tasksList.innerHTML = `<p class="empty-message">할일을 불러오지 못했습니다: ${escapeHtml(err.message)}</p>`;
   }
 }
@@ -173,7 +250,8 @@ btnLogout.addEventListener('click', async () => {
   await window.hermannAPI.logout();
   setAuthUI(false);
   renderMonthGrid(currentMonth, []);
-  renderTasks([]);
+  cachedTasks = [];
+  renderTasks(cachedTasks);
 });
 
 btnTray.addEventListener('click', () => window.hermannAPI.minimizeToTray());
@@ -187,6 +265,26 @@ btnPrevMonth.addEventListener('click', () => {
 btnNextMonth.addEventListener('click', () => {
   currentMonth.setMonth(currentMonth.getMonth() + 1);
   loadEvents();
+});
+
+btnAddEvent.addEventListener('click', () => window.hermannAPI.openNewEvent());
+
+newTaskInput.addEventListener('keydown', async (e) => {
+  if (e.key !== 'Enter') return;
+  const title = newTaskInput.value.trim();
+  if (!title) return;
+  newTaskInput.value = '';
+  newTaskInput.disabled = true;
+  try {
+    const newTask = await window.hermannAPI.createTask(title);
+    cachedTasks = [...cachedTasks, newTask];
+    renderTasks(cachedTasks);
+  } catch (err) {
+    tasksList.innerHTML = `<p class="empty-message">할일 추가 실패: ${escapeHtml(err.message)}</p>`;
+  } finally {
+    newTaskInput.disabled = false;
+    newTaskInput.focus();
+  }
 });
 
 (async function init() {
