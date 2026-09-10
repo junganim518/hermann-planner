@@ -170,6 +170,14 @@ if (!gotSingleInstanceLock) {
     shell.openExternal('https://calendar.google.com/calendar/u/0/r/eventedit');
   });
 
+  ipcMain.handle('layout:getSplitRatio', () => {
+    return store.get('splitRatio', 0.6);
+  });
+
+  ipcMain.on('layout:setSplitRatio', (event, ratio) => {
+    store.set('splitRatio', ratio);
+  });
+
   ipcMain.on('widget:close', () => {
     app.isQuitting = true;
     app.quit();

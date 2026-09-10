@@ -14,6 +14,9 @@ contextBridge.exposeInMainWorld('hermannAPI', {
 
   openNewEvent: () => ipcRenderer.send('calendar:openNewEvent'),
 
+  getSplitRatio: () => ipcRenderer.invoke('layout:getSplitRatio'),
+  setSplitRatio: (ratio) => ipcRenderer.send('layout:setSplitRatio', ratio),
+
   closeWidget: () => ipcRenderer.send('widget:close'),
   minimizeToTray: () => ipcRenderer.send('widget:minimizeToTray'),
 });

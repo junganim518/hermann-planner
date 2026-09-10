@@ -10,6 +10,12 @@ const daysGrid = document.getElementById('days-grid');
 const tasksList = document.getElementById('tasks-list');
 const newTaskInput = document.getElementById('new-task-input');
 const btnAddEvent = document.getElementById('btn-add-event');
+const content = document.getElementById('content');
+const paneCalendar = document.getElementById('pane-calendar');
+const paneResizer = document.getElementById('pane-resizer');
+
+const MIN_PANE_WIDTH = 200;
+const DEFAULT_SPLIT_RATIO = 0.6;
 
 let currentMonth = new Date();
 currentMonth.setDate(1);
@@ -17,6 +23,41 @@ currentMonth.setHours(0, 0, 0, 0);
 
 let completedExpanded = false;
 let cachedTasks = [];
+
+function applySplitRatio(ratio) {
+  paneCalendar.style.flexBasis = `${ratio * 100}%`;
+}
+
+function initResizer() {
+  let dragging = false;
+
+  paneResizer.addEventListener('mousedown', (e) => {
+    dragging = true;
+    paneResizer.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const rect = content.getBoundingClientRect();
+    const usableWidth = rect.width - paneResizer.offsetWidth;
+    let calendarWidth = e.clientX - rect.left;
+    calendarWidth = Math.max(MIN_PANE_WIDTH, Math.min(calendarWidth, usableWidth - MIN_PANE_WIDTH));
+    applySplitRatio(calendarWidth / usableWidth);
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    paneResizer.classList.remove('dragging');
+    document.body.style.cursor = '';
+    const rect = content.getBoundingClientRect();
+    const usableWidth = rect.width - paneResizer.offsetWidth;
+    const ratio = paneCalendar.getBoundingClientRect().width / usableWidth;
+    window.hermannAPI.setSplitRatio(ratio);
+  });
+}
 
 function setAuthUI(loggedIn) {
   btnLogin.classList.toggle('hidden', loggedIn);
@@ -288,6 +329,10 @@ newTaskInput.addEventListener('keydown', async (e) => {
 });
 
 (async function init() {
+  initResizer();
+  const savedRatio = await window.hermannAPI.getSplitRatio();
+  applySplitRatio(savedRatio ?? DEFAULT_SPLIT_RATIO);
+
   renderMonthGrid(currentMonth, []);
   const { loggedIn } = await window.hermannAPI.getAuthStatus();
   setAuthUI(loggedIn);

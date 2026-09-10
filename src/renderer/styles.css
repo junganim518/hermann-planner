@@ -98,19 +98,40 @@ html, body {
 }
 
 #pane-calendar {
-  flex: 3;
+  flex: 0 0 60%;
   display: flex;
   flex-direction: column;
-  min-width: 0;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  min-width: 200px;
   overflow: hidden;
 }
 
+#pane-resizer {
+  flex-shrink: 0;
+  width: 6px;
+  cursor: col-resize;
+  position: relative;
+}
+
+#pane-resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+#pane-resizer:hover::after,
+#pane-resizer.dragging::after {
+  background: #4a6cf7;
+}
+
 #pane-tasks {
-  flex: 2;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  min-width: 200px;
   overflow: hidden;
 }
 
