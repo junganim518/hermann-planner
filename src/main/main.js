@@ -1,5 +1,6 @@
 const path = require('path');
-const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, screen } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage } = require('electron');
+const windowStateKeeper = require('electron-window-state');
 const { getAuthorizedClient, isLoggedIn, logout } = require('../auth/googleAuth');
 const { listEvents } = require('../auth/calendarService');
 const { listTasks, setTaskCompletion } = require('../auth/tasksService');
@@ -9,15 +10,16 @@ let tray = null;
 let authClient = null;
 
 function createWindow() {
-  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
-  const width = 800;
-  const height = 500;
+  const mainWindowState = windowStateKeeper({
+    defaultWidth: 800,
+    defaultHeight: 500,
+  });
 
   mainWindow = new BrowserWindow({
-    width,
-    height,
-    x: screenWidth - width - 24,
-    y: screenHeight - height - 24,
+    x: mainWindowState.x,
+    y: mainWindowState.y,
+    width: mainWindowState.width,
+    height: mainWindowState.height,
     minWidth: 640,
     minHeight: 400,
     frame: false,
@@ -33,6 +35,8 @@ function createWindow() {
     },
   });
 
+  mainWindowState.manage(mainWindow);
+
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
 
   mainWindow.on('close', (event) => {
@@ -43,6 +47,12 @@ function createWindow() {
   });
 }
 
+function showMainWindow() {
+  if (!mainWindow) return;
+  mainWindow.show();
+  mainWindow.focus();
+}
+
 function createTray() {
   const trayIcon = nativeImage.createFromPath(path.join(__dirname, '../../assets/tray.png'));
   tray = new Tray(trayIcon);
@@ -50,14 +60,8 @@ function createTray() {
 
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: '위젯 보이기/숨기기',
-      click: () => {
-        if (mainWindow.isVisible()) {
-          mainWindow.hide();
-        } else {
-          mainWindow.show();
-        }
-      },
+      label: '열기',
+      click: () => showMainWindow(),
     },
     { type: 'separator' },
     {
@@ -70,13 +74,7 @@ function createTray() {
   ]);
 
   tray.setContextMenu(contextMenu);
-  tray.on('click', () => {
-    if (mainWindow.isVisible()) {
-      mainWindow.hide();
-    } else {
-      mainWindow.show();
-    }
-  });
+  tray.on('click', () => showMainWindow());
 }
 
 ipcMain.handle('auth:login', async () => {
