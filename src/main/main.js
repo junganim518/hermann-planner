@@ -168,8 +168,17 @@ if (!gotSingleInstanceLock) {
     return deleteTask(authClient, taskListId, taskId);
   });
 
-  ipcMain.on('calendar:openNewEvent', () => {
-    shell.openExternal('https://calendar.google.com/calendar/u/0/r/eventedit');
+  ipcMain.on('calendar:openNewEvent', (event, dateStr) => {
+    if (dateStr && /^\d{8}$/.test(dateStr)) {
+      const year = Number(dateStr.slice(0, 4));
+      const month = Number(dateStr.slice(4, 6)) - 1;
+      const day = Number(dateStr.slice(6, 8));
+      const endDate = new Date(year, month, day + 1);
+      const endStr = `${endDate.getFullYear()}${String(endDate.getMonth() + 1).padStart(2, '0')}${String(endDate.getDate()).padStart(2, '0')}`;
+      shell.openExternal(`https://calendar.google.com/calendar/render?action=TEMPLATE&dates=${dateStr}/${endStr}`);
+    } else {
+      shell.openExternal('https://calendar.google.com/calendar/u/0/r/eventedit');
+    }
   });
 
   ipcMain.handle('layout:getSplitRatio', () => {

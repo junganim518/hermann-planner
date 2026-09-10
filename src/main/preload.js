@@ -12,7 +12,7 @@ contextBridge.exposeInMainWorld('hermannAPI', {
   createTask: (title) => ipcRenderer.invoke('tasks:create', title),
   deleteTask: (taskListId, taskId) => ipcRenderer.invoke('tasks:delete', taskListId, taskId),
 
-  openNewEvent: () => ipcRenderer.send('calendar:openNewEvent'),
+  openNewEvent: (dateStr) => ipcRenderer.send('calendar:openNewEvent', dateStr),
 
   getSplitRatio: () => ipcRenderer.invoke('layout:getSplitRatio'),
   setSplitRatio: (ratio) => ipcRenderer.send('layout:setSplitRatio', ratio),

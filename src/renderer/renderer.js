@@ -123,6 +123,12 @@ function renderMonthGrid(monthDate, events) {
     cell.className = 'day-cell';
     if (!isCurrentMonth) cell.classList.add('other-month');
     if (key === todayKey) cell.classList.add('today');
+    cell.title = '더블클릭하면 이 날짜로 새 일정을 만듭니다';
+    cell.addEventListener('dblclick', () => {
+      cell.classList.add('flash');
+      setTimeout(() => cell.classList.remove('flash'), 500);
+      window.hermannAPI.openNewEvent(key.replace(/-/g, ''));
+    });
 
     const numberEl = document.createElement('span');
     numberEl.className = 'day-number';
