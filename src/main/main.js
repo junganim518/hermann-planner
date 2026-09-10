@@ -6,6 +6,8 @@ const { getAuthorizedClient, isLoggedIn, logout } = require('../auth/googleAuth'
 const { listEvents } = require('../auth/calendarService');
 const { listTasks, setTaskCompletion, createTask, deleteTask } = require('../auth/tasksService');
 
+app.setAppUserModelId('com.hermann.planner');
+
 const store = new Store();
 
 let mainWindow = null;
