@@ -21,19 +21,21 @@
       <span id="auth-status"></span>
     </div>
 
-    <nav id="tabs">
-      <button class="tab-btn active" data-tab="calendar">캘린더</button>
-      <button class="tab-btn" data-tab="tasks">할일</button>
-    </nav>
-
     <main id="content">
-      <section id="tab-calendar" class="tab-panel active">
-        <div id="calendar-list" class="scroll-list">
-          <p class="empty-message">로그인 후 일정이 표시됩니다.</p>
+      <section id="pane-calendar">
+        <div id="month-nav">
+          <button id="btn-prev-month" title="이전 달">◀</button>
+          <span id="month-label"></span>
+          <button id="btn-next-month" title="다음 달">▶</button>
         </div>
+        <div class="weekday-row">
+          <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+        </div>
+        <div id="days-grid" class="days-grid"></div>
       </section>
 
-      <section id="tab-tasks" class="tab-panel">
+      <section id="pane-tasks">
+        <h2 class="pane-title">할일</h2>
         <div id="tasks-list" class="scroll-list">
           <p class="empty-message">로그인 후 할일이 표시됩니다.</p>
         </div>

@@ -3,10 +3,15 @@ const btnLogout = document.getElementById('btn-logout');
 const authStatus = document.getElementById('auth-status');
 const btnTray = document.getElementById('btn-tray');
 const btnClose = document.getElementById('btn-close');
-const calendarList = document.getElementById('calendar-list');
+const monthLabel = document.getElementById('month-label');
+const btnPrevMonth = document.getElementById('btn-prev-month');
+const btnNextMonth = document.getElementById('btn-next-month');
+const daysGrid = document.getElementById('days-grid');
 const tasksList = document.getElementById('tasks-list');
-const tabButtons = document.querySelectorAll('.tab-btn');
-const tabPanels = document.querySelectorAll('.tab-panel');
+
+let currentMonth = new Date();
+currentMonth.setDate(1);
+currentMonth.setHours(0, 0, 0, 0);
 
 function setAuthUI(loggedIn) {
   btnLogin.classList.toggle('hidden', loggedIn);
@@ -14,27 +19,88 @@ function setAuthUI(loggedIn) {
   authStatus.textContent = loggedIn ? '연결됨' : '연결 안 됨';
 }
 
-function formatEventTime(event) {
-  if (event.start?.date && !event.start?.dateTime) return '종일';
-  const date = new Date(event.start.dateTime);
-  return date.toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
 }
 
-function renderEvents(events) {
-  calendarList.innerHTML = '';
-  if (!events.length) {
-    calendarList.innerHTML = '<p class="empty-message">표시할 일정이 없습니다.</p>';
-    return;
+function formatDateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function dateKeyFromEvent(event) {
+  if (event.start?.date) return event.start.date;
+  if (event.start?.dateTime) return formatDateKey(new Date(event.start.dateTime));
+  return null;
+}
+
+function formatEventLabel(event) {
+  const title = event.summary || '(제목 없음)';
+  if (event.start?.dateTime) {
+    const time = new Date(event.start.dateTime).toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    return `${time} ${title}`;
   }
+  return title;
+}
+
+function renderMonthGrid(monthDate, events) {
+  monthLabel.textContent = `${monthDate.getFullYear()}년 ${monthDate.getMonth() + 1}월`;
+
+  const eventsByDay = {};
   for (const event of events) {
-    const item = document.createElement('div');
-    item.className = 'event-item';
-    item.innerHTML = `
-      <span class="event-dot"></span>
-      <span class="event-time">${formatEventTime(event)}</span>
-      <span class="event-title">${escapeHtml(event.summary || '(제목 없음)')}</span>
-    `;
-    calendarList.appendChild(item);
+    const key = dateKeyFromEvent(event);
+    if (!key) continue;
+    if (!eventsByDay[key]) eventsByDay[key] = [];
+    eventsByDay[key].push(event);
+  }
+
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const todayKey = formatDateKey(new Date());
+  const maxShown = 3;
+
+  daysGrid.innerHTML = '';
+  for (let i = 0; i < 42; i++) {
+    const cellDate = new Date(year, month, i - firstWeekday + 1);
+    const key = formatDateKey(cellDate);
+    const isCurrentMonth = cellDate.getMonth() === month;
+
+    const cell = document.createElement('div');
+    cell.className = 'day-cell';
+    if (!isCurrentMonth) cell.classList.add('other-month');
+    if (key === todayKey) cell.classList.add('today');
+
+    const numberEl = document.createElement('span');
+    numberEl.className = 'day-number';
+    numberEl.textContent = cellDate.getDate();
+    cell.appendChild(numberEl);
+
+    const dayEvents = eventsByDay[key] || [];
+    const eventsContainer = document.createElement('div');
+    eventsContainer.className = 'day-events';
+    for (const event of dayEvents.slice(0, maxShown)) {
+      const evEl = document.createElement('div');
+      evEl.className = 'day-event';
+      evEl.textContent = formatEventLabel(event);
+      evEl.title = event.summary || '(제목 없음)';
+      eventsContainer.appendChild(evEl);
+    }
+    if (dayEvents.length > maxShown) {
+      const more = document.createElement('div');
+      more.className = 'day-event-more';
+      more.textContent = `+${dayEvents.length - maxShown}`;
+      eventsContainer.appendChild(more);
+    }
+    cell.appendChild(eventsContainer);
+    daysGrid.appendChild(cell);
   }
 }
 
@@ -66,21 +132,16 @@ function renderTasks(tasks) {
   }
 }
 
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
 async function loadEvents() {
-  const timeMin = new Date();
-  const timeMax = new Date();
-  timeMax.setDate(timeMax.getDate() + 14);
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+  const timeMin = new Date(year, month, 1);
+  const timeMax = new Date(year, month + 1, 1);
   try {
     const events = await window.hermannAPI.getEvents(timeMin.toISOString(), timeMax.toISOString());
-    renderEvents(events);
+    renderMonthGrid(currentMonth, events);
   } catch (err) {
-    calendarList.innerHTML = `<p class="empty-message">일정을 불러오지 못했습니다: ${escapeHtml(err.message)}</p>`;
+    daysGrid.innerHTML = `<p class="empty-message">일정을 불러오지 못했습니다: ${escapeHtml(err.message)}</p>`;
   }
 }
 
@@ -111,23 +172,25 @@ btnLogin.addEventListener('click', async () => {
 btnLogout.addEventListener('click', async () => {
   await window.hermannAPI.logout();
   setAuthUI(false);
-  renderEvents([]);
+  renderMonthGrid(currentMonth, []);
   renderTasks([]);
 });
 
 btnTray.addEventListener('click', () => window.hermannAPI.minimizeToTray());
 btnClose.addEventListener('click', () => window.hermannAPI.closeWidget());
 
-tabButtons.forEach((btn) => {
-  btn.addEventListener('click', () => {
-    tabButtons.forEach((b) => b.classList.remove('active'));
-    tabPanels.forEach((p) => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
-  });
+btnPrevMonth.addEventListener('click', () => {
+  currentMonth.setMonth(currentMonth.getMonth() - 1);
+  loadEvents();
+});
+
+btnNextMonth.addEventListener('click', () => {
+  currentMonth.setMonth(currentMonth.getMonth() + 1);
+  loadEvents();
 });
 
 (async function init() {
+  renderMonthGrid(currentMonth, []);
   const { loggedIn } = await window.hermannAPI.getAuthStatus();
   setAuthUI(loggedIn);
   if (loggedIn) {

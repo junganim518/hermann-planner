@@ -10,20 +10,19 @@ let authClient = null;
 
 function createWindow() {
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
-  const width = 340;
-  const height = 480;
+  const width = 800;
+  const height = 500;
 
   mainWindow = new BrowserWindow({
     width,
     height,
     x: screenWidth - width - 24,
     y: screenHeight - height - 24,
-    minWidth: 260,
-    minHeight: 320,
+    minWidth: 640,
+    minHeight: 400,
     frame: false,
     transparent: true,
     backgroundColor: '#00000000',
-    alwaysOnTop: true,
     resizable: true,
     skipTaskbar: false,
     icon: path.join(__dirname, '../../assets/icon.png'),
@@ -34,7 +33,6 @@ function createWindow() {
     },
   });
 
-  mainWindow.setAlwaysOnTop(true, 'screen-saver');
   mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
 
   mainWindow.on('close', (event) => {
