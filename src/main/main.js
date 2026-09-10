@@ -1,13 +1,32 @@
 const path = require('path');
 const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage } = require('electron');
 const windowStateKeeper = require('electron-window-state');
+const Store = require('electron-store');
 const { getAuthorizedClient, isLoggedIn, logout } = require('../auth/googleAuth');
 const { listEvents } = require('../auth/calendarService');
 const { listTasks, setTaskCompletion } = require('../auth/tasksService');
 
+const store = new Store();
+
 let mainWindow = null;
 let tray = null;
 let authClient = null;
+
+function isAutoStartEnabled() {
+  return app.getLoginItemSettings().openAtLogin;
+}
+
+function setAutoStart(enabled) {
+  app.setLoginItemSettings({ openAtLogin: enabled });
+  if (tray) tray.setContextMenu(buildTrayMenu());
+}
+
+function ensureDefaultAutoStart() {
+  if (!store.get('autoStartConfigured')) {
+    app.setLoginItemSettings({ openAtLogin: true });
+    store.set('autoStartConfigured', true);
+  }
+}
 
 function createWindow() {
   const mainWindowState = windowStateKeeper({
@@ -53,15 +72,18 @@ function showMainWindow() {
   mainWindow.focus();
 }
 
-function createTray() {
-  const trayIcon = nativeImage.createFromPath(path.join(__dirname, '../../assets/tray.png'));
-  tray = new Tray(trayIcon);
-  tray.setToolTip('Hermann Planner');
-
-  const contextMenu = Menu.buildFromTemplate([
+function buildTrayMenu() {
+  return Menu.buildFromTemplate([
     {
       label: '열기',
       click: () => showMainWindow(),
+    },
+    { type: 'separator' },
+    {
+      label: '시작 시 자동 실행',
+      type: 'checkbox',
+      checked: isAutoStartEnabled(),
+      click: (menuItem) => setAutoStart(menuItem.checked),
     },
     { type: 'separator' },
     {
@@ -72,8 +94,13 @@ function createTray() {
       },
     },
   ]);
+}
 
-  tray.setContextMenu(contextMenu);
+function createTray() {
+  const trayIcon = nativeImage.createFromPath(path.join(__dirname, '../../assets/tray.png'));
+  tray = new Tray(trayIcon);
+  tray.setToolTip('Hermann Planner');
+  tray.setContextMenu(buildTrayMenu());
   tray.on('click', () => showMainWindow());
 }
 
@@ -117,6 +144,7 @@ ipcMain.on('widget:minimizeToTray', () => {
 });
 
 app.whenReady().then(() => {
+  ensureDefaultAutoStart();
   createWindow();
   createTray();
 
