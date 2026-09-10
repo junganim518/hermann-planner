@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+out/
+
+# Google OAuth secrets - never commit
+credentials.json
+token.json
+.env
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+*.log
+npm-debug.log*
