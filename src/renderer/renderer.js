@@ -7,6 +7,7 @@ const monthLabel = document.getElementById('month-label');
 const btnPrevMonth = document.getElementById('btn-prev-month');
 const btnNextMonth = document.getElementById('btn-next-month');
 const daysGrid = document.getElementById('days-grid');
+const calendarLegend = document.getElementById('calendar-legend');
 const tasksList = document.getElementById('tasks-list');
 const newTaskInput = document.getElementById('new-task-input');
 const btnAddEvent = document.getElementById('btn-add-event');
@@ -111,6 +112,49 @@ function dateKeyFromEvent(event) {
   if (event.start?.date) return event.start.date;
   if (event.start?.dateTime) return formatDateKey(new Date(event.start.dateTime));
   return null;
+}
+
+const HOLIDAY_COLOR = '#ef4444';
+const DEFAULT_EVENT_COLOR = '#4a6cf7';
+
+function hexToRgba(hex, alpha) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return null;
+  const num = parseInt(m[1], 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function getEventColor(event) {
+  if (event.calendarIsHoliday) return HOLIDAY_COLOR;
+  return event.calendarBackgroundColor || DEFAULT_EVENT_COLOR;
+}
+
+function updateCalendarLegend(events) {
+  const seen = new Map();
+  for (const event of events) {
+    if (!event.calendarId || seen.has(event.calendarId)) continue;
+    seen.set(event.calendarId, {
+      name: event.calendarSummary || event.calendarId,
+      color: getEventColor(event),
+    });
+  }
+
+  calendarLegend.innerHTML = '';
+  for (const { name, color } of seen.values()) {
+    const item = document.createElement('span');
+    item.className = 'legend-item';
+
+    const dot = document.createElement('span');
+    dot.className = 'legend-dot';
+    dot.style.backgroundColor = color;
+    item.appendChild(dot);
+    item.appendChild(document.createTextNode(name));
+
+    calendarLegend.appendChild(item);
+  }
 }
 
 function formatEventLabel(event) {
@@ -383,44 +427,53 @@ function renderMonthGrid(monthDate, events) {
       const evEl = document.createElement('div');
       evEl.className = 'day-event';
       evEl.title = event.summary || '(제목 없음)';
-      evEl.addEventListener('click', (e) => {
-        e.stopPropagation();
-        openEventEditModal(event);
-      });
-      evEl.addEventListener('dblclick', (e) => e.stopPropagation());
+      evEl.style.backgroundColor = hexToRgba(getEventColor(event), 0.55) || 'rgba(74, 108, 247, 0.35)';
 
       const evLabel = document.createElement('span');
       evLabel.className = 'day-event-label';
       evLabel.textContent = formatEventLabel(event);
       evEl.appendChild(evLabel);
 
-      const evDeleteBtn = document.createElement('button');
-      evDeleteBtn.type = 'button';
-      evDeleteBtn.className = 'day-event-delete-btn';
-      evDeleteBtn.title = '삭제';
-      evDeleteBtn.textContent = '🗑';
-      evDeleteBtn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        if (evDeleteBtn.classList.contains('confirm')) {
-          clearTimeout(evDeleteBtn._resetTimer);
-          try {
-            await window.hermannAPI.deleteEvent(event.calendarId, event.id);
-            await loadEvents();
-          } catch (err) {
-            alert(`일정 삭제 실패: ${err.message}`);
-            loadEvents();
+      // The holiday calendar is read-only (accessRole 'reader'); editing or
+      // deleting its events would just fail against the Google API, so those
+      // events are display-only instead of wiring up the usual interactions.
+      if (!event.calendarIsHoliday) {
+        evEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openEventEditModal(event);
+        });
+        evEl.addEventListener('dblclick', (e) => e.stopPropagation());
+
+        const evDeleteBtn = document.createElement('button');
+        evDeleteBtn.type = 'button';
+        evDeleteBtn.className = 'day-event-delete-btn';
+        evDeleteBtn.title = '삭제';
+        evDeleteBtn.textContent = '🗑';
+        evDeleteBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (evDeleteBtn.classList.contains('confirm')) {
+            clearTimeout(evDeleteBtn._resetTimer);
+            try {
+              await window.hermannAPI.deleteEvent(event.calendarId, event.id);
+              await loadEvents();
+            } catch (err) {
+              alert(`일정 삭제 실패: ${err.message}`);
+              loadEvents();
+            }
+            return;
           }
-          return;
-        }
-        evDeleteBtn.classList.add('confirm');
-        evDeleteBtn.textContent = '확인';
-        evDeleteBtn._resetTimer = setTimeout(() => {
-          evDeleteBtn.classList.remove('confirm');
-          evDeleteBtn.textContent = '🗑';
-        }, 3000);
-      });
-      evDeleteBtn.addEventListener('dblclick', (e) => e.stopPropagation());
-      evEl.appendChild(evDeleteBtn);
+          evDeleteBtn.classList.add('confirm');
+          evDeleteBtn.textContent = '확인';
+          evDeleteBtn._resetTimer = setTimeout(() => {
+            evDeleteBtn.classList.remove('confirm');
+            evDeleteBtn.textContent = '🗑';
+          }, 3000);
+        });
+        evDeleteBtn.addEventListener('dblclick', (e) => e.stopPropagation());
+        evEl.appendChild(evDeleteBtn);
+      } else {
+        evEl.style.cursor = 'default';
+      }
 
       eventsContainer.appendChild(evEl);
     }
@@ -593,6 +646,7 @@ async function loadEvents() {
   try {
     const events = await window.hermannAPI.getEvents(timeMin.toISOString(), timeMax.toISOString());
     renderMonthGrid(currentMonth, events);
+    updateCalendarLegend(events);
   } catch (err) {
     daysGrid.innerHTML = `<p class="empty-message">일정을 불러오지 못했습니다: ${escapeHtml(err.message)}</p>`;
   }
@@ -632,6 +686,7 @@ btnLogout.addEventListener('click', async () => {
   await window.hermannAPI.logout();
   setAuthUI(false);
   renderMonthGrid(currentMonth, []);
+  updateCalendarLegend([]);
   cachedTasks = [];
   cachedCalendars = [];
   renderTasks(cachedTasks);

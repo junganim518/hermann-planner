@@ -260,7 +260,7 @@ html, body {
 }
 
 .day-event:hover {
-  background: rgba(74, 108, 247, 0.6);
+  filter: brightness(1.3);
 }
 
 .day-event-label {
@@ -298,6 +298,30 @@ html, body {
 .day-event-more {
   font-size: 11px;
   color: #8a8d9a;
+}
+
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 6px 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #b9bcc9;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .scroll-list {

@@ -1,5 +1,13 @@
 const { google } = require('googleapis');
 
+// The Korean holiday calendar (and other locales' equivalents) is a
+// read-only subscription: accessRole 'reader' plus a name/id that says
+// "holiday" in some form is enough to identify it without hardcoding
+// Google's specific calendar id.
+function isHolidayCalendar(cal) {
+  return cal.accessRole === 'reader' && (/휴일|holiday/i.test(cal.summary || '') || /holiday/i.test(cal.id || ''));
+}
+
 // Returns upcoming events between timeMin and timeMax (ISO strings) across
 // all of the user's writable calendars, merged and sorted by start time.
 async function listEvents(authClient, timeMin, timeMax) {
@@ -18,7 +26,16 @@ async function listEvents(authClient, timeMin, timeMax) {
           singleEvents: true,
           orderBy: 'startTime',
         })
-        .then((res) => (res.data.items || []).map((event) => ({ ...event, calendarId: cal.id, calendarSummary: cal.summary, calendarColorId: cal.colorId })))
+        .then((res) =>
+          (res.data.items || []).map((event) => ({
+            ...event,
+            calendarId: cal.id,
+            calendarSummary: cal.summary,
+            calendarColorId: cal.colorId,
+            calendarBackgroundColor: cal.backgroundColor,
+            calendarIsHoliday: isHolidayCalendar(cal),
+          }))
+        )
         .catch(() => [])
     )
   );
