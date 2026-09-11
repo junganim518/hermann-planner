@@ -251,8 +251,9 @@ async function openEventCreateModal(defaultDateKey) {
   eventCreateEndTimeInput.value = '10:00';
 
   if (!cachedCalendars.length) await loadCalendars();
+  const preferredCalendar = cachedCalendars.find((cal) => cal.summary === '헤르만');
   const lastUsedCalendarId = await window.hermannAPI.getLastCalendarId();
-  populateCalendarSelect(eventCreateCalendarSelect, lastUsedCalendarId);
+  populateCalendarSelect(eventCreateCalendarSelect, preferredCalendar ? preferredCalendar.id : lastUsedCalendarId);
 
   eventCreateModal.classList.remove('hidden');
   eventCreateTitleInput.focus();

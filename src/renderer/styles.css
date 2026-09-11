@@ -10,7 +10,7 @@ html, body {
   background: transparent;
   overflow: hidden;
   font-family: 'Segoe UI', sans-serif;
-  font-size: 13px;
+  font-size: 15px;
   color: #f2f2f5;
 }
 
@@ -74,7 +74,7 @@ html, body {
   background: #4a6cf7;
   color: white;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 #auth-bar button:hover {
@@ -82,7 +82,7 @@ html, body {
 }
 
 #auth-status {
-  font-size: 11px;
+  font-size: 13px;
   color: #b9bcc9;
 }
 
@@ -138,7 +138,7 @@ html, body {
 .pane-title {
   margin: 0;
   padding: 8px 10px;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 600;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   flex-shrink: 0;
@@ -177,20 +177,20 @@ html, body {
 #btn-add-event {
   width: auto !important;
   padding: 0 8px;
-  font-size: 11px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
 #month-label {
   font-weight: 600;
-  font-size: 13px;
+  font-size: 16px;
 }
 
 .weekday-row {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   text-align: center;
-  font-size: 12px;
+  font-size: 14px;
   color: #b9bcc9;
   padding: 4px 6px 0;
   flex-shrink: 0;
@@ -236,7 +236,7 @@ html, body {
 }
 
 .day-number {
-  font-size: 11px;
+  font-size: 12px;
   color: #b9bcc9;
 }
 
@@ -251,7 +251,7 @@ html, body {
 
 .day-event {
   position: relative;
-  font-size: 10px;
+  font-size: 11px;
   background: rgba(74, 108, 247, 0.35);
   border-radius: 2px;
   padding: 0 12px 0 2px;
@@ -278,7 +278,7 @@ html, body {
   border: none;
   background: rgba(0, 0, 0, 0.45);
   color: #f2f2f5;
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1;
   padding: 1px 2px;
   border-radius: 2px;
@@ -296,7 +296,7 @@ html, body {
 }
 
 .day-event-more {
-  font-size: 10px;
+  font-size: 11px;
   color: #8a8d9a;
 }
 
@@ -308,7 +308,7 @@ html, body {
 
 .empty-message {
   color: #8a8d9a;
-  font-size: 12px;
+  font-size: 14px;
   text-align: center;
   margin-top: 20px;
 }
@@ -326,7 +326,7 @@ html, body {
   padding: 6px 8px;
   background: rgba(255, 255, 255, 0.06);
   color: #f2f2f5;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 #new-task-input::placeholder {
@@ -364,7 +364,7 @@ html, body {
   padding: 1px 4px;
   background: rgba(255, 255, 255, 0.06);
   color: #f2f2f5;
-  font-size: 13px;
+  font-size: 15px;
   font-family: inherit;
 }
 
@@ -387,7 +387,7 @@ html, body {
   background: transparent;
   color: #8a8d9a;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 13px;
   padding: 2px 4px;
   border-radius: 4px;
   opacity: 0;
@@ -406,7 +406,7 @@ html, body {
 .task-delete-btn.confirm {
   opacity: 1;
   color: #e5484d;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .completed-section {
@@ -421,7 +421,7 @@ html, body {
   border: none;
   background: transparent;
   color: #b9bcc9;
-  font-size: 11px;
+  font-size: 13px;
   padding: 6px 4px;
   cursor: pointer;
   text-align: left;
@@ -455,7 +455,7 @@ html, body {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   padding: 16px;
-  width: 240px;
+  width: 270px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -464,11 +464,11 @@ html, body {
 
 .modal-box h3 {
   margin: 0 0 4px;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .modal-box label {
-  font-size: 11px;
+  font-size: 13px;
   color: #b9bcc9;
 }
 
@@ -482,7 +482,7 @@ html, body {
   padding: 6px 8px;
   background: rgba(255, 255, 255, 0.06);
   color: #f2f2f5;
-  font-size: 12px;
+  font-size: 14px;
   font-family: inherit;
   color-scheme: dark;
 }
@@ -491,6 +491,14 @@ html, body {
 .modal-box select:focus {
   outline: none;
   border-color: #4a6cf7;
+}
+
+/* Chromium's native <select> popup can otherwise render unselected options
+   in a dim system color regardless of color-scheme; set it explicitly so
+   every option (e.g. "헤르만") is as legible as the others. */
+.modal-box select option {
+  background: #21232f;
+  color: #f2f2f5;
 }
 
 .checkbox-label {
@@ -526,8 +534,8 @@ html, body {
 .modal-actions button {
   border: none;
   border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 12px;
+  padding: 7px 14px;
+  font-size: 14px;
   cursor: pointer;
 }
 
