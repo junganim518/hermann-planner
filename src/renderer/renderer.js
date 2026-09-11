@@ -105,6 +105,20 @@ function formatDateKey(date) {
   return `${y}-${m}-${d}`;
 }
 
+// The 42-cell month grid always shows some adjacent-month dates to fill out
+// full weeks. Shared by loadEvents() (what range to fetch) and
+// renderMonthGrid() (what range to draw) so the two can never drift apart -
+// fetching only the target month's own range was why events on visible
+// adjacent-month dates never showed up.
+function getGridRange(monthDate) {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const gridStart = new Date(year, month, 1 - firstWeekday);
+  const gridEnd = new Date(year, month, 1 - firstWeekday + 42);
+  return { gridStart, gridEnd };
+}
+
 function formatTimeKey(date) {
   const h = String(date.getHours()).padStart(2, '0');
   const m = String(date.getMinutes()).padStart(2, '0');
@@ -427,15 +441,14 @@ function renderMonthGrid(monthDate, events) {
     eventsByDay[key].push(event);
   }
 
-  const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
-  const firstWeekday = new Date(year, month, 1).getDay();
+  const { gridStart } = getGridRange(monthDate);
   const todayKey = formatDateKey(new Date());
   const maxShown = 3;
 
   daysGrid.innerHTML = '';
   for (let i = 0; i < 42; i++) {
-    const cellDate = new Date(year, month, i - firstWeekday + 1);
+    const cellDate = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
     const key = formatDateKey(cellDate);
     const isCurrentMonth = cellDate.getMonth() === month;
 
@@ -679,12 +692,9 @@ function renderTasks(tasks) {
 }
 
 async function loadEvents() {
-  const year = currentMonth.getFullYear();
-  const month = currentMonth.getMonth();
-  const timeMin = new Date(year, month, 1);
-  const timeMax = new Date(year, month + 1, 1);
+  const { gridStart, gridEnd } = getGridRange(currentMonth);
   try {
-    const events = await window.hermannAPI.getEvents(timeMin.toISOString(), timeMax.toISOString());
+    const events = await window.hermannAPI.getEvents(gridStart.toISOString(), gridEnd.toISOString());
     renderMonthGrid(currentMonth, events);
     updateCalendarLegend(events);
   } catch (err) {
