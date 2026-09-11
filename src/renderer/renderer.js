@@ -18,6 +18,11 @@ const eventEditTitleInput = document.getElementById('event-edit-title');
 const eventEditDateInput = document.getElementById('event-edit-date');
 const eventEditSaveBtn = document.getElementById('event-edit-save');
 const eventEditCancelBtn = document.getElementById('event-edit-cancel');
+const eventCreateModal = document.getElementById('event-create-modal');
+const eventCreateTitleInput = document.getElementById('event-create-title');
+const eventCreateDateInput = document.getElementById('event-create-date');
+const eventCreateSaveBtn = document.getElementById('event-create-save');
+const eventCreateCancelBtn = document.getElementById('event-create-cancel');
 
 const MIN_PANE_WIDTH = 200;
 const DEFAULT_SPLIT_RATIO = 0.6;
@@ -138,8 +143,54 @@ eventEditModal.addEventListener('click', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !eventEditModal.classList.contains('hidden')) {
-    closeEventEditModal();
+  if (e.key !== 'Escape') return;
+  if (!eventEditModal.classList.contains('hidden')) closeEventEditModal();
+  if (!eventCreateModal.classList.contains('hidden')) closeEventCreateModal();
+});
+
+function addDaysToDateKey(dateKey, days) {
+  const d = new Date(`${dateKey}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return formatDateKey(d);
+}
+
+function openEventCreateModal(defaultDateKey) {
+  eventCreateTitleInput.value = '';
+  eventCreateDateInput.value = defaultDateKey || formatDateKey(new Date());
+  eventCreateModal.classList.remove('hidden');
+  eventCreateTitleInput.focus();
+}
+
+function closeEventCreateModal() {
+  eventCreateModal.classList.add('hidden');
+}
+
+eventCreateCancelBtn.addEventListener('click', closeEventCreateModal);
+
+eventCreateModal.addEventListener('click', (e) => {
+  if (e.target === eventCreateModal) closeEventCreateModal();
+});
+
+eventCreateSaveBtn.addEventListener('click', async () => {
+  const title = eventCreateTitleInput.value.trim();
+  const dateKey = eventCreateDateInput.value;
+  if (!title || !dateKey) return;
+
+  const newEvent = {
+    summary: title,
+    start: { date: dateKey },
+    end: { date: addDaysToDateKey(dateKey, 1) },
+  };
+
+  eventCreateSaveBtn.disabled = true;
+  try {
+    await window.hermannAPI.createEvent(newEvent);
+    closeEventCreateModal();
+    await loadEvents();
+  } catch (err) {
+    alert(`일정 추가 실패: ${err.message}`);
+  } finally {
+    eventCreateSaveBtn.disabled = false;
   }
 });
 
@@ -203,7 +254,7 @@ function renderMonthGrid(monthDate, events) {
     cell.addEventListener('dblclick', () => {
       cell.classList.add('flash');
       setTimeout(() => cell.classList.remove('flash'), 500);
-      window.hermannAPI.openNewEvent(key.replace(/-/g, ''));
+      openEventCreateModal(key);
     });
 
     const numberEl = document.createElement('span');
@@ -217,13 +268,46 @@ function renderMonthGrid(monthDate, events) {
     for (const event of dayEvents.slice(0, maxShown)) {
       const evEl = document.createElement('div');
       evEl.className = 'day-event';
-      evEl.textContent = formatEventLabel(event);
       evEl.title = event.summary || '(제목 없음)';
       evEl.addEventListener('click', (e) => {
         e.stopPropagation();
         openEventEditModal(event);
       });
       evEl.addEventListener('dblclick', (e) => e.stopPropagation());
+
+      const evLabel = document.createElement('span');
+      evLabel.className = 'day-event-label';
+      evLabel.textContent = formatEventLabel(event);
+      evEl.appendChild(evLabel);
+
+      const evDeleteBtn = document.createElement('button');
+      evDeleteBtn.type = 'button';
+      evDeleteBtn.className = 'day-event-delete-btn';
+      evDeleteBtn.title = '삭제';
+      evDeleteBtn.textContent = '🗑';
+      evDeleteBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (evDeleteBtn.classList.contains('confirm')) {
+          clearTimeout(evDeleteBtn._resetTimer);
+          try {
+            await window.hermannAPI.deleteEvent(event.calendarId, event.id);
+            await loadEvents();
+          } catch (err) {
+            alert(`일정 삭제 실패: ${err.message}`);
+            loadEvents();
+          }
+          return;
+        }
+        evDeleteBtn.classList.add('confirm');
+        evDeleteBtn.textContent = '확인';
+        evDeleteBtn._resetTimer = setTimeout(() => {
+          evDeleteBtn.classList.remove('confirm');
+          evDeleteBtn.textContent = '🗑';
+        }, 3000);
+      });
+      evDeleteBtn.addEventListener('dblclick', (e) => e.stopPropagation());
+      evEl.appendChild(evDeleteBtn);
+
       eventsContainer.appendChild(evEl);
     }
     if (dayEvents.length > maxShown) {
@@ -451,7 +535,7 @@ btnNextMonth.addEventListener('click', () => {
   loadEvents();
 });
 
-btnAddEvent.addEventListener('click', () => window.hermannAPI.openNewEvent());
+btnAddEvent.addEventListener('click', () => openEventCreateModal());
 
 newTaskInput.addEventListener('keydown', async (e) => {
   if (e.key !== 'Enter') return;

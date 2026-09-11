@@ -250,18 +250,49 @@ html, body {
 }
 
 .day-event {
+  position: relative;
   font-size: 10px;
   background: rgba(74, 108, 247, 0.35);
   border-radius: 2px;
-  padding: 0 2px;
-  white-space: nowrap;
+  padding: 0 12px 0 2px;
   overflow: hidden;
-  text-overflow: ellipsis;
   cursor: pointer;
 }
 
 .day-event:hover {
   background: rgba(74, 108, 247, 0.6);
+}
+
+.day-event-label {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.day-event-delete-btn {
+  position: absolute;
+  right: 1px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: rgba(0, 0, 0, 0.45);
+  color: #f2f2f5;
+  font-size: 8px;
+  line-height: 1;
+  padding: 1px 2px;
+  border-radius: 2px;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.day-event:hover .day-event-delete-btn {
+  opacity: 1;
+}
+
+.day-event-delete-btn.confirm {
+  opacity: 1;
+  background: #e5484d;
 }
 
 .day-event-more {
@@ -474,20 +505,20 @@ html, body {
   cursor: pointer;
 }
 
-#event-edit-save {
+.modal-btn-primary {
   background: #4a6cf7;
   color: white;
 }
 
-#event-edit-save:hover {
+.modal-btn-primary:hover {
   background: #3a5ce0;
 }
 
-#event-edit-cancel {
+.modal-btn-secondary {
   background: rgba(255, 255, 255, 0.08);
   color: #f2f2f5;
 }
 
-#event-edit-cancel:hover {
+.modal-btn-secondary:hover {
   background: rgba(255, 255, 255, 0.2);
 }

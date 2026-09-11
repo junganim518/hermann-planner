@@ -42,4 +42,18 @@ async function updateEvent(authClient, calendarId, eventId, { summary, start, en
   return { ...res.data, calendarId };
 }
 
-module.exports = { listEvents, updateEvent };
+async function createEvent(authClient, { summary, start, end }) {
+  const calendar = google.calendar({ version: 'v3', auth: authClient });
+  const res = await calendar.events.insert({
+    calendarId: 'primary',
+    requestBody: { summary, start, end },
+  });
+  return { ...res.data, calendarId: 'primary' };
+}
+
+async function deleteEvent(authClient, calendarId, eventId) {
+  const calendar = google.calendar({ version: 'v3', auth: authClient });
+  await calendar.events.delete({ calendarId, eventId });
+}
+
+module.exports = { listEvents, updateEvent, createEvent, deleteEvent };

@@ -1,9 +1,9 @@
 const path = require('path');
-const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, shell } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage } = require('electron');
 const windowStateKeeper = require('electron-window-state');
 const Store = require('electron-store');
 const { getAuthorizedClient, isLoggedIn, logout } = require('../auth/googleAuth');
-const { listEvents, updateEvent } = require('../auth/calendarService');
+const { listEvents, updateEvent, createEvent, deleteEvent } = require('../auth/calendarService');
 const { listTasks, setTaskCompletion, createTask, deleteTask, updateTask } = require('../auth/tasksService');
 
 app.setAppUserModelId('com.hermann.planner');
@@ -178,17 +178,14 @@ if (!gotSingleInstanceLock) {
     return updateEvent(authClient, calendarId, eventId, updates);
   });
 
-  ipcMain.on('calendar:openNewEvent', (event, dateStr) => {
-    if (dateStr && /^\d{8}$/.test(dateStr)) {
-      const year = Number(dateStr.slice(0, 4));
-      const month = Number(dateStr.slice(4, 6)) - 1;
-      const day = Number(dateStr.slice(6, 8));
-      const endDate = new Date(year, month, day + 1);
-      const endStr = `${endDate.getFullYear()}${String(endDate.getMonth() + 1).padStart(2, '0')}${String(endDate.getDate()).padStart(2, '0')}`;
-      shell.openExternal(`https://calendar.google.com/calendar/render?action=TEMPLATE&dates=${dateStr}/${endStr}`);
-    } else {
-      shell.openExternal('https://calendar.google.com/calendar/u/0/r/eventedit');
-    }
+  ipcMain.handle('calendar:create', async (event, eventData) => {
+    if (!authClient) authClient = await getAuthorizedClient();
+    return createEvent(authClient, eventData);
+  });
+
+  ipcMain.handle('calendar:delete', async (event, calendarId, eventId) => {
+    if (!authClient) authClient = await getAuthorizedClient();
+    return deleteEvent(authClient, calendarId, eventId);
   });
 
   ipcMain.handle('layout:getSplitRatio', () => {
