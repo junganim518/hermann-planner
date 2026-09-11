@@ -6,6 +6,7 @@ const btnClose = document.getElementById('btn-close');
 const monthLabel = document.getElementById('month-label');
 const btnPrevMonth = document.getElementById('btn-prev-month');
 const btnNextMonth = document.getElementById('btn-next-month');
+const btnRefresh = document.getElementById('btn-refresh');
 const daysGrid = document.getElementById('days-grid');
 const calendarLegend = document.getElementById('calendar-legend');
 const tasksList = document.getElementById('tasks-list');
@@ -45,6 +46,7 @@ currentMonth.setHours(0, 0, 0, 0);
 let completedExpanded = false;
 let cachedTasks = [];
 let cachedCalendars = [];
+let loggedInState = false;
 
 const TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
@@ -84,6 +86,7 @@ function initResizer() {
 }
 
 function setAuthUI(loggedIn) {
+  loggedInState = loggedIn;
   btnLogin.classList.toggle('hidden', loggedIn);
   btnLogout.classList.toggle('hidden', !loggedIn);
   authStatus.textContent = loggedIn ? '연결됨' : '연결 안 됨';
@@ -708,6 +711,59 @@ async function refreshAll() {
   await Promise.all([loadEvents(), loadTasks(), loadCalendars()]);
 }
 
+const AUTO_REFRESH_INTERVAL_MS = 60000;
+let autoRefreshTimer = null;
+
+// Don't clobber the user's in-progress work: skip a refresh while either
+// modal is open, or while they're typing in any text field (new-task input,
+// inline task-title edit, or a modal's own fields).
+function isUserBusy() {
+  if (!eventEditModal.classList.contains('hidden')) return true;
+  if (!eventCreateModal.classList.contains('hidden')) return true;
+  const active = document.activeElement;
+  return !!active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
+}
+
+async function autoRefreshTick() {
+  if (!loggedInState || isUserBusy()) return;
+  await refreshAll();
+}
+
+function startAutoRefresh() {
+  if (autoRefreshTimer) return;
+  autoRefreshTimer = setInterval(autoRefreshTick, AUTO_REFRESH_INTERVAL_MS);
+}
+
+function stopAutoRefresh() {
+  if (!autoRefreshTimer) return;
+  clearInterval(autoRefreshTimer);
+  autoRefreshTimer = null;
+}
+
+// The window is hidden (minimized to tray) rather than merely unfocused, so
+// document.hidden tracks exactly the "no point refreshing" state we want -
+// polling stops while hidden and an immediate refresh fires when it's shown
+// again, on top of resuming the interval.
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    stopAutoRefresh();
+    return;
+  }
+  startAutoRefresh();
+  if (loggedInState && !isUserBusy()) refreshAll();
+});
+
+btnRefresh.addEventListener('click', async () => {
+  btnRefresh.disabled = true;
+  btnRefresh.classList.add('spinning');
+  try {
+    await refreshAll();
+  } finally {
+    btnRefresh.disabled = false;
+    btnRefresh.classList.remove('spinning');
+  }
+});
+
 btnLogin.addEventListener('click', async () => {
   authStatus.textContent = '로그인 진행 중...';
   try {
@@ -773,4 +829,5 @@ newTaskInput.addEventListener('keydown', async (e) => {
   if (loggedIn) {
     await refreshAll();
   }
+  if (!document.hidden) startAutoRefresh();
 })();
