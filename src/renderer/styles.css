@@ -244,16 +244,14 @@ html, body {
   background: rgba(255, 255, 255, 0.08);
 }
 
+/* CSS opacity multiplies down the tree and a child's own opacity can never
+   exceed 1, so with this parent capped below the target, no child rule could
+   ever reach it (0.35 parent x 0.5 child topped out at 0.175 - nearly
+   invisible). Setting the parent itself to the target dimness, with no extra
+   per-event multiplier, lands events at the same readable tone as the date
+   number instead of stacking two multipliers. */
 .day-cell.other-month {
-  opacity: 0.35;
-}
-
-/* Event colors (holiday red, per-calendar hues, white observance text) are
-   far more saturated than the day-number's muted gray, so they still read
-   as vivid even under the cell's own opacity - dim them further so their
-   tone matches the faded date. */
-.day-cell.other-month .day-event {
-  opacity: 0.5;
+  opacity: 0.55;
 }
 
 .day-cell.today {
