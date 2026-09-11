@@ -13,6 +13,11 @@ const btnAddEvent = document.getElementById('btn-add-event');
 const content = document.getElementById('content');
 const paneCalendar = document.getElementById('pane-calendar');
 const paneResizer = document.getElementById('pane-resizer');
+const eventEditModal = document.getElementById('event-edit-modal');
+const eventEditTitleInput = document.getElementById('event-edit-title');
+const eventEditDateInput = document.getElementById('event-edit-date');
+const eventEditSaveBtn = document.getElementById('event-edit-save');
+const eventEditCancelBtn = document.getElementById('event-edit-cancel');
 
 const MIN_PANE_WIDTH = 200;
 const DEFAULT_SPLIT_RATIO = 0.6;
@@ -96,6 +101,77 @@ function formatEventLabel(event) {
   return title;
 }
 
+let editingEvent = null;
+
+function shiftEventDateTime(dateTimeObj, deltaDays) {
+  if (!dateTimeObj) return dateTimeObj;
+  if (dateTimeObj.date) {
+    const d = new Date(`${dateTimeObj.date}T00:00:00`);
+    d.setDate(d.getDate() + deltaDays);
+    return { date: formatDateKey(d) };
+  }
+  if (dateTimeObj.dateTime) {
+    const d = new Date(dateTimeObj.dateTime);
+    d.setDate(d.getDate() + deltaDays);
+    return { dateTime: d.toISOString(), timeZone: dateTimeObj.timeZone };
+  }
+  return dateTimeObj;
+}
+
+function openEventEditModal(event) {
+  editingEvent = event;
+  eventEditTitleInput.value = event.summary || '';
+  eventEditDateInput.value = dateKeyFromEvent(event) || '';
+  eventEditModal.classList.remove('hidden');
+  eventEditTitleInput.focus();
+}
+
+function closeEventEditModal() {
+  eventEditModal.classList.add('hidden');
+  editingEvent = null;
+}
+
+eventEditCancelBtn.addEventListener('click', closeEventEditModal);
+
+eventEditModal.addEventListener('click', (e) => {
+  if (e.target === eventEditModal) closeEventEditModal();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !eventEditModal.classList.contains('hidden')) {
+    closeEventEditModal();
+  }
+});
+
+eventEditSaveBtn.addEventListener('click', async () => {
+  if (!editingEvent) return;
+  const newTitle = eventEditTitleInput.value.trim();
+  const newDateKey = eventEditDateInput.value;
+  if (!newTitle || !newDateKey) return;
+
+  const oldDateKey = dateKeyFromEvent(editingEvent);
+  const deltaDays = oldDateKey
+    ? Math.round((new Date(`${newDateKey}T00:00:00`) - new Date(`${oldDateKey}T00:00:00`)) / 86400000)
+    : 0;
+
+  const updates = {
+    summary: newTitle,
+    start: shiftEventDateTime(editingEvent.start, deltaDays),
+    end: shiftEventDateTime(editingEvent.end, deltaDays),
+  };
+
+  eventEditSaveBtn.disabled = true;
+  try {
+    await window.hermannAPI.updateEvent(editingEvent.calendarId, editingEvent.id, updates);
+    closeEventEditModal();
+    await loadEvents();
+  } catch (err) {
+    alert(`일정 수정 실패: ${err.message}`);
+  } finally {
+    eventEditSaveBtn.disabled = false;
+  }
+});
+
 function renderMonthGrid(monthDate, events) {
   monthLabel.textContent = `${monthDate.getFullYear()}년 ${monthDate.getMonth() + 1}월`;
 
@@ -143,6 +219,11 @@ function renderMonthGrid(monthDate, events) {
       evEl.className = 'day-event';
       evEl.textContent = formatEventLabel(event);
       evEl.title = event.summary || '(제목 없음)';
+      evEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openEventEditModal(event);
+      });
+      evEl.addEventListener('dblclick', (e) => e.stopPropagation());
       eventsContainer.appendChild(evEl);
     }
     if (dayEvents.length > maxShown) {
@@ -154,6 +235,60 @@ function renderMonthGrid(monthDate, events) {
     cell.appendChild(eventsContainer);
     daysGrid.appendChild(cell);
   }
+}
+
+function startTaskTitleEdit(item, titleEl, task) {
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'task-title-edit';
+  input.value = task.title || '';
+  item.replaceChild(input, titleEl);
+  input.focus();
+  input.select();
+
+  let finished = false;
+
+  function restore() {
+    input.removeEventListener('blur', commit);
+    if (input.parentNode === item) item.replaceChild(titleEl, input);
+  }
+
+  async function commit() {
+    if (finished) return;
+    finished = true;
+    const newTitle = input.value.trim();
+    if (!newTitle || newTitle === (task.title || '')) {
+      restore();
+      return;
+    }
+    try {
+      await window.hermannAPI.updateTask(task.taskListId, task.id, newTitle);
+      task.title = newTitle;
+      titleEl.textContent = newTitle;
+      restore();
+    } catch (err) {
+      restore();
+      loadTasks();
+    }
+  }
+
+  function cancel() {
+    if (finished) return;
+    finished = true;
+    restore();
+  }
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      input.blur();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancel();
+    }
+  });
+
+  input.addEventListener('blur', commit);
 }
 
 function createTaskItem(task) {
@@ -171,6 +306,8 @@ function createTaskItem(task) {
   const title = document.createElement('span');
   title.className = 'task-title' + (completed ? ' completed' : '');
   title.textContent = task.title || '(제목 없음)';
+  title.title = '클릭하여 수정';
+  title.addEventListener('click', () => startTaskTitleEdit(item, title, task));
 
   const deleteBtn = document.createElement('button');
   deleteBtn.type = 'button';

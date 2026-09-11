@@ -18,7 +18,7 @@ async function listEvents(authClient, timeMin, timeMax) {
           singleEvents: true,
           orderBy: 'startTime',
         })
-        .then((res) => (res.data.items || []).map((event) => ({ ...event, calendarSummary: cal.summary, calendarColorId: cal.colorId })))
+        .then((res) => (res.data.items || []).map((event) => ({ ...event, calendarId: cal.id, calendarSummary: cal.summary, calendarColorId: cal.colorId })))
         .catch(() => [])
     )
   );
@@ -32,4 +32,14 @@ async function listEvents(authClient, timeMin, timeMax) {
     });
 }
 
-module.exports = { listEvents };
+async function updateEvent(authClient, calendarId, eventId, { summary, start, end }) {
+  const calendar = google.calendar({ version: 'v3', auth: authClient });
+  const res = await calendar.events.patch({
+    calendarId,
+    eventId,
+    requestBody: { summary, start, end },
+  });
+  return { ...res.data, calendarId };
+}
+
+module.exports = { listEvents, updateEvent };

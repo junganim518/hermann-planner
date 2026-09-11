@@ -257,6 +257,11 @@ html, body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.day-event:hover {
+  background: rgba(74, 108, 247, 0.6);
 }
 
 .day-event-more {
@@ -313,6 +318,27 @@ html, body {
 .task-title {
   flex: 1;
   word-break: break-word;
+  cursor: text;
+}
+
+.task-title:hover {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+.task-title-edit {
+  flex: 1;
+  border: 1px solid #4a6cf7;
+  border-radius: 4px;
+  padding: 1px 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #f2f2f5;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.task-title-edit:focus {
+  outline: none;
 }
 
 .task-title.completed {
@@ -381,4 +407,87 @@ html, body {
 
 .completed-list.collapsed {
   display: none;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-box {
+  background: #21232f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 16px;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.modal-box h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+.modal-box label {
+  font-size: 11px;
+  color: #b9bcc9;
+}
+
+.modal-box input[type="text"],
+.modal-box input[type="date"] {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #f2f2f5;
+  font-size: 12px;
+  font-family: inherit;
+  color-scheme: dark;
+}
+
+.modal-box input:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.modal-actions button {
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#event-edit-save {
+  background: #4a6cf7;
+  color: white;
+}
+
+#event-edit-save:hover {
+  background: #3a5ce0;
+}
+
+#event-edit-cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f2f2f5;
+}
+
+#event-edit-cancel:hover {
+  background: rgba(255, 255, 255, 0.2);
 }

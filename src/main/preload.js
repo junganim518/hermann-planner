@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld('hermannAPI', {
     ipcRenderer.invoke('tasks:setCompletion', taskListId, taskId, completed),
   createTask: (title) => ipcRenderer.invoke('tasks:create', title),
   deleteTask: (taskListId, taskId) => ipcRenderer.invoke('tasks:delete', taskListId, taskId),
+  updateTask: (taskListId, taskId, title) => ipcRenderer.invoke('tasks:update', taskListId, taskId, title),
+  updateEvent: (calendarId, eventId, updates) => ipcRenderer.invoke('calendar:update', calendarId, eventId, updates),
 
   openNewEvent: (dateStr) => ipcRenderer.send('calendar:openNewEvent', dateStr),
 

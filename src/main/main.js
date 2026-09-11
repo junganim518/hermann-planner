@@ -3,8 +3,8 @@ const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, shell } = require(
 const windowStateKeeper = require('electron-window-state');
 const Store = require('electron-store');
 const { getAuthorizedClient, isLoggedIn, logout } = require('../auth/googleAuth');
-const { listEvents } = require('../auth/calendarService');
-const { listTasks, setTaskCompletion, createTask, deleteTask } = require('../auth/tasksService');
+const { listEvents, updateEvent } = require('../auth/calendarService');
+const { listTasks, setTaskCompletion, createTask, deleteTask, updateTask } = require('../auth/tasksService');
 
 app.setAppUserModelId('com.hermann.planner');
 
@@ -166,6 +166,16 @@ if (!gotSingleInstanceLock) {
   ipcMain.handle('tasks:delete', async (event, taskListId, taskId) => {
     if (!authClient) authClient = await getAuthorizedClient();
     return deleteTask(authClient, taskListId, taskId);
+  });
+
+  ipcMain.handle('tasks:update', async (event, taskListId, taskId, title) => {
+    if (!authClient) authClient = await getAuthorizedClient();
+    return updateTask(authClient, taskListId, taskId, title);
+  });
+
+  ipcMain.handle('calendar:update', async (event, calendarId, eventId, updates) => {
+    if (!authClient) authClient = await getAuthorizedClient();
+    return updateEvent(authClient, calendarId, eventId, updates);
   });
 
   ipcMain.on('calendar:openNewEvent', (event, dateStr) => {

@@ -44,4 +44,14 @@ async function deleteTask(authClient, taskListId, taskId) {
   await tasksApi.tasks.delete({ tasklist: taskListId, task: taskId });
 }
 
-module.exports = { listTasks, setTaskCompletion, createTask, deleteTask };
+async function updateTask(authClient, taskListId, taskId, title) {
+  const tasksApi = google.tasks({ version: 'v1', auth: authClient });
+  const res = await tasksApi.tasks.patch({
+    tasklist: taskListId,
+    task: taskId,
+    requestBody: { title },
+  });
+  return { ...res.data, taskListId };
+}
+
+module.exports = { listTasks, setTaskCompletion, createTask, deleteTask, updateTask };
