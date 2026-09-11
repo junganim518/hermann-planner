@@ -53,10 +53,26 @@
     <div id="event-edit-modal" class="modal-overlay hidden">
       <div class="modal-box">
         <h3>일정 수정</h3>
+        <label for="event-edit-calendar">캘린더</label>
+        <select id="event-edit-calendar"></select>
         <label for="event-edit-title">제목</label>
         <input id="event-edit-title" type="text" />
+        <label class="checkbox-label">
+          <input id="event-edit-allday" type="checkbox" />
+          종일 일정
+        </label>
         <label for="event-edit-date">날짜</label>
         <input id="event-edit-date" type="date" />
+        <div id="event-edit-time-row" class="time-row hidden">
+          <div>
+            <label for="event-edit-start-time">시작 시간</label>
+            <input id="event-edit-start-time" type="time" />
+          </div>
+          <div>
+            <label for="event-edit-end-time">종료 시간</label>
+            <input id="event-edit-end-time" type="time" />
+          </div>
+        </div>
         <div class="modal-actions">
           <button id="event-edit-cancel" type="button" class="modal-btn modal-btn-secondary">취소</button>
           <button id="event-edit-save" type="button" class="modal-btn modal-btn-primary">저장</button>
@@ -67,10 +83,26 @@
     <div id="event-create-modal" class="modal-overlay hidden">
       <div class="modal-box">
         <h3>일정 추가</h3>
+        <label for="event-create-calendar">캘린더</label>
+        <select id="event-create-calendar"></select>
         <label for="event-create-title">제목</label>
         <input id="event-create-title" type="text" />
+        <label class="checkbox-label">
+          <input id="event-create-allday" type="checkbox" checked />
+          종일 일정
+        </label>
         <label for="event-create-date">날짜</label>
         <input id="event-create-date" type="date" />
+        <div id="event-create-time-row" class="time-row hidden">
+          <div>
+            <label for="event-create-start-time">시작 시간</label>
+            <input id="event-create-start-time" type="time" />
+          </div>
+          <div>
+            <label for="event-create-end-time">종료 시간</label>
+            <input id="event-create-end-time" type="time" />
+          </div>
+        </div>
         <div class="modal-actions">
           <button id="event-create-cancel" type="button" class="modal-btn modal-btn-secondary">취소</button>
           <button id="event-create-save" type="button" class="modal-btn modal-btn-primary">추가</button>

@@ -473,7 +473,9 @@ html, body {
 }
 
 .modal-box input[type="text"],
-.modal-box input[type="date"] {
+.modal-box input[type="date"],
+.modal-box input[type="time"],
+.modal-box select {
   width: 100%;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
@@ -485,9 +487,33 @@ html, body {
   color-scheme: dark;
 }
 
-.modal-box input:focus {
+.modal-box input:focus,
+.modal-box select:focus {
   outline: none;
   border-color: #4a6cf7;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.time-row {
+  display: flex;
+  gap: 8px;
+}
+
+.time-row > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .modal-actions {

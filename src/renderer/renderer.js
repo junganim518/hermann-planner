@@ -14,13 +14,23 @@ const content = document.getElementById('content');
 const paneCalendar = document.getElementById('pane-calendar');
 const paneResizer = document.getElementById('pane-resizer');
 const eventEditModal = document.getElementById('event-edit-modal');
+const eventEditCalendarSelect = document.getElementById('event-edit-calendar');
 const eventEditTitleInput = document.getElementById('event-edit-title');
+const eventEditAllDayCheckbox = document.getElementById('event-edit-allday');
 const eventEditDateInput = document.getElementById('event-edit-date');
+const eventEditTimeRow = document.getElementById('event-edit-time-row');
+const eventEditStartTimeInput = document.getElementById('event-edit-start-time');
+const eventEditEndTimeInput = document.getElementById('event-edit-end-time');
 const eventEditSaveBtn = document.getElementById('event-edit-save');
 const eventEditCancelBtn = document.getElementById('event-edit-cancel');
 const eventCreateModal = document.getElementById('event-create-modal');
+const eventCreateCalendarSelect = document.getElementById('event-create-calendar');
 const eventCreateTitleInput = document.getElementById('event-create-title');
+const eventCreateAllDayCheckbox = document.getElementById('event-create-allday');
 const eventCreateDateInput = document.getElementById('event-create-date');
+const eventCreateTimeRow = document.getElementById('event-create-time-row');
+const eventCreateStartTimeInput = document.getElementById('event-create-start-time');
+const eventCreateEndTimeInput = document.getElementById('event-create-end-time');
 const eventCreateSaveBtn = document.getElementById('event-create-save');
 const eventCreateCancelBtn = document.getElementById('event-create-cancel');
 
@@ -33,6 +43,9 @@ currentMonth.setHours(0, 0, 0, 0);
 
 let completedExpanded = false;
 let cachedTasks = [];
+let cachedCalendars = [];
+
+const TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 function applySplitRatio(ratio) {
   paneCalendar.style.flexBasis = `${ratio * 100}%`;
@@ -88,6 +101,12 @@ function formatDateKey(date) {
   return `${y}-${m}-${d}`;
 }
 
+function formatTimeKey(date) {
+  const h = String(date.getHours()).padStart(2, '0');
+  const m = String(date.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
 function dateKeyFromEvent(event) {
   if (event.start?.date) return event.start.date;
   if (event.start?.dateTime) return formatDateKey(new Date(event.start.dateTime));
@@ -107,26 +126,87 @@ function formatEventLabel(event) {
 }
 
 let editingEvent = null;
+let editingEventSpanDays = 1;
 
-function shiftEventDateTime(dateTimeObj, deltaDays) {
-  if (!dateTimeObj) return dateTimeObj;
-  if (dateTimeObj.date) {
-    const d = new Date(`${dateTimeObj.date}T00:00:00`);
-    d.setDate(d.getDate() + deltaDays);
-    return { date: formatDateKey(d) };
+async function loadCalendars() {
+  try {
+    cachedCalendars = await window.hermannAPI.listCalendars();
+  } catch (err) {
+    cachedCalendars = [];
   }
-  if (dateTimeObj.dateTime) {
-    const d = new Date(dateTimeObj.dateTime);
-    d.setDate(d.getDate() + deltaDays);
-    return { dateTime: d.toISOString(), timeZone: dateTimeObj.timeZone };
+}
+
+function populateCalendarSelect(selectEl, selectedId) {
+  selectEl.innerHTML = '';
+  for (const cal of cachedCalendars) {
+    const opt = document.createElement('option');
+    opt.value = cal.id;
+    opt.textContent = cal.primary ? `${cal.summary} (기본)` : cal.summary;
+    selectEl.appendChild(opt);
   }
-  return dateTimeObj;
+  if (selectedId && cachedCalendars.some((cal) => cal.id === selectedId)) {
+    selectEl.value = selectedId;
+  } else if (cachedCalendars.length) {
+    selectEl.value = cachedCalendars[0].id;
+  }
+}
+
+// Builds fresh start/end objects from the modal's current form state, so a
+// single code path handles date changes, time changes, and toggling the
+// all-day checkbox (which switches between the `date` and `dateTime` shapes).
+function buildEventDateRange({ dateKey, allDay, startTime, endTime, spanDays }) {
+  if (allDay) {
+    const days = spanDays && spanDays > 0 ? spanDays : 1;
+    // Explicit nulls clear any leftover dateTime/timeZone from a previously-timed
+    // event - Google's patch merges the start/end object instead of replacing it
+    // wholesale, so without this an all-day toggle fails with "Invalid start time".
+    return {
+      start: { date: dateKey, dateTime: null, timeZone: null },
+      end: { date: addDaysToDateKey(dateKey, days), dateTime: null, timeZone: null },
+    };
+  }
+
+  const startStr = `${dateKey}T${startTime || '09:00'}:00`;
+  let endDateKey = dateKey;
+  let endStr = `${dateKey}T${endTime || '10:00'}:00`;
+  if (new Date(endStr) <= new Date(startStr)) {
+    endDateKey = addDaysToDateKey(dateKey, 1);
+    endStr = `${endDateKey}T${endTime || '10:00'}:00`;
+  }
+
+  return {
+    start: { dateTime: new Date(startStr).toISOString(), timeZone: TIME_ZONE, date: null },
+    end: { dateTime: new Date(endStr).toISOString(), timeZone: TIME_ZONE, date: null },
+  };
 }
 
 function openEventEditModal(event) {
   editingEvent = event;
   eventEditTitleInput.value = event.summary || '';
   eventEditDateInput.value = dateKeyFromEvent(event) || '';
+
+  const isAllDay = !!event.start?.date;
+  eventEditAllDayCheckbox.checked = isAllDay;
+  eventEditTimeRow.classList.toggle('hidden', isAllDay);
+
+  editingEventSpanDays = 1;
+  if (isAllDay) {
+    if (event.start?.date && event.end?.date) {
+      const s = new Date(`${event.start.date}T00:00:00`);
+      const e = new Date(`${event.end.date}T00:00:00`);
+      editingEventSpanDays = Math.max(1, Math.round((e - s) / 86400000));
+    }
+    eventEditStartTimeInput.value = '09:00';
+    eventEditEndTimeInput.value = '10:00';
+  } else {
+    const s = new Date(event.start.dateTime);
+    eventEditStartTimeInput.value = formatTimeKey(s);
+    const e = event.end?.dateTime ? new Date(event.end.dateTime) : new Date(s.getTime() + 60 * 60000);
+    eventEditEndTimeInput.value = formatTimeKey(e);
+  }
+
+  populateCalendarSelect(eventEditCalendarSelect, event.calendarId);
+
   eventEditModal.classList.remove('hidden');
   eventEditTitleInput.focus();
 }
@@ -135,6 +215,14 @@ function closeEventEditModal() {
   eventEditModal.classList.add('hidden');
   editingEvent = null;
 }
+
+eventEditAllDayCheckbox.addEventListener('change', () => {
+  eventEditTimeRow.classList.toggle('hidden', eventEditAllDayCheckbox.checked);
+});
+
+eventCreateAllDayCheckbox.addEventListener('change', () => {
+  eventCreateTimeRow.classList.toggle('hidden', eventCreateAllDayCheckbox.checked);
+});
 
 eventEditCancelBtn.addEventListener('click', closeEventEditModal);
 
@@ -154,9 +242,18 @@ function addDaysToDateKey(dateKey, days) {
   return formatDateKey(d);
 }
 
-function openEventCreateModal(defaultDateKey) {
+async function openEventCreateModal(defaultDateKey) {
   eventCreateTitleInput.value = '';
   eventCreateDateInput.value = defaultDateKey || formatDateKey(new Date());
+  eventCreateAllDayCheckbox.checked = true;
+  eventCreateTimeRow.classList.add('hidden');
+  eventCreateStartTimeInput.value = '09:00';
+  eventCreateEndTimeInput.value = '10:00';
+
+  if (!cachedCalendars.length) await loadCalendars();
+  const lastUsedCalendarId = await window.hermannAPI.getLastCalendarId();
+  populateCalendarSelect(eventCreateCalendarSelect, lastUsedCalendarId);
+
   eventCreateModal.classList.remove('hidden');
   eventCreateTitleInput.focus();
 }
@@ -176,15 +273,25 @@ eventCreateSaveBtn.addEventListener('click', async () => {
   const dateKey = eventCreateDateInput.value;
   if (!title || !dateKey) return;
 
+  const calendarId = eventCreateCalendarSelect.value || 'primary';
+  const range = buildEventDateRange({
+    dateKey,
+    allDay: eventCreateAllDayCheckbox.checked,
+    startTime: eventCreateStartTimeInput.value,
+    endTime: eventCreateEndTimeInput.value,
+  });
+
   const newEvent = {
+    calendarId,
     summary: title,
-    start: { date: dateKey },
-    end: { date: addDaysToDateKey(dateKey, 1) },
+    start: range.start,
+    end: range.end,
   };
 
   eventCreateSaveBtn.disabled = true;
   try {
     await window.hermannAPI.createEvent(newEvent);
+    window.hermannAPI.setLastCalendarId(calendarId);
     closeEventCreateModal();
     await loadEvents();
   } catch (err) {
@@ -200,20 +307,26 @@ eventEditSaveBtn.addEventListener('click', async () => {
   const newDateKey = eventEditDateInput.value;
   if (!newTitle || !newDateKey) return;
 
-  const oldDateKey = dateKeyFromEvent(editingEvent);
-  const deltaDays = oldDateKey
-    ? Math.round((new Date(`${newDateKey}T00:00:00`) - new Date(`${oldDateKey}T00:00:00`)) / 86400000)
-    : 0;
+  const newCalendarId = eventEditCalendarSelect.value || editingEvent.calendarId;
+  const range = buildEventDateRange({
+    dateKey: newDateKey,
+    allDay: eventEditAllDayCheckbox.checked,
+    startTime: eventEditStartTimeInput.value,
+    endTime: eventEditEndTimeInput.value,
+    spanDays: editingEventSpanDays,
+  });
 
   const updates = {
     summary: newTitle,
-    start: shiftEventDateTime(editingEvent.start, deltaDays),
-    end: shiftEventDateTime(editingEvent.end, deltaDays),
+    start: range.start,
+    end: range.end,
+    calendarId: newCalendarId,
   };
 
   eventEditSaveBtn.disabled = true;
   try {
     await window.hermannAPI.updateEvent(editingEvent.calendarId, editingEvent.id, updates);
+    window.hermannAPI.setLastCalendarId(newCalendarId);
     closeEventEditModal();
     await loadEvents();
   } catch (err) {
@@ -500,7 +613,7 @@ async function loadTasks() {
 }
 
 async function refreshAll() {
-  await Promise.all([loadEvents(), loadTasks()]);
+  await Promise.all([loadEvents(), loadTasks(), loadCalendars()]);
 }
 
 btnLogin.addEventListener('click', async () => {
@@ -519,6 +632,7 @@ btnLogout.addEventListener('click', async () => {
   setAuthUI(false);
   renderMonthGrid(currentMonth, []);
   cachedTasks = [];
+  cachedCalendars = [];
   renderTasks(cachedTasks);
 });
 

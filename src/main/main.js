@@ -3,7 +3,7 @@ const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage } = require('electr
 const windowStateKeeper = require('electron-window-state');
 const Store = require('electron-store');
 const { getAuthorizedClient, isLoggedIn, logout } = require('../auth/googleAuth');
-const { listEvents, updateEvent, createEvent, deleteEvent } = require('../auth/calendarService');
+const { listEvents, updateEvent, createEvent, deleteEvent, listWritableCalendars } = require('../auth/calendarService');
 const { listTasks, setTaskCompletion, createTask, deleteTask, updateTask } = require('../auth/tasksService');
 
 app.setAppUserModelId('com.hermann.planner');
@@ -186,6 +186,19 @@ if (!gotSingleInstanceLock) {
   ipcMain.handle('calendar:delete', async (event, calendarId, eventId) => {
     if (!authClient) authClient = await getAuthorizedClient();
     return deleteEvent(authClient, calendarId, eventId);
+  });
+
+  ipcMain.handle('calendar:listCalendars', async () => {
+    if (!authClient) authClient = await getAuthorizedClient();
+    return listWritableCalendars(authClient);
+  });
+
+  ipcMain.handle('settings:getLastCalendarId', () => {
+    return store.get('lastCalendarId', null);
+  });
+
+  ipcMain.on('settings:setLastCalendarId', (event, calendarId) => {
+    store.set('lastCalendarId', calendarId);
   });
 
   ipcMain.handle('layout:getSplitRatio', () => {

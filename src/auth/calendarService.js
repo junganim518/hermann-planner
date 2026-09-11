@@ -32,23 +32,40 @@ async function listEvents(authClient, timeMin, timeMax) {
     });
 }
 
-async function updateEvent(authClient, calendarId, eventId, { summary, start, end }) {
+// Updates title/date/time, and if `calendarId` differs from the event's
+// current calendar, moves it to the new calendar first (events.move only
+// relocates the event; the follow-up patch applies the other field changes).
+async function updateEvent(authClient, currentCalendarId, eventId, { summary, start, end, calendarId: newCalendarId }) {
   const calendar = google.calendar({ version: 'v3', auth: authClient });
+  let targetCalendarId = currentCalendarId;
+  let targetEventId = eventId;
+
+  if (newCalendarId && newCalendarId !== currentCalendarId) {
+    const moveRes = await calendar.events.move({
+      calendarId: currentCalendarId,
+      eventId,
+      destination: newCalendarId,
+    });
+    targetCalendarId = newCalendarId;
+    targetEventId = moveRes.data.id;
+  }
+
   const res = await calendar.events.patch({
-    calendarId,
-    eventId,
+    calendarId: targetCalendarId,
+    eventId: targetEventId,
     requestBody: { summary, start, end },
   });
-  return { ...res.data, calendarId };
+  return { ...res.data, calendarId: targetCalendarId };
 }
 
-async function createEvent(authClient, { summary, start, end }) {
+async function createEvent(authClient, { calendarId, summary, start, end }) {
   const calendar = google.calendar({ version: 'v3', auth: authClient });
+  const targetCalendarId = calendarId || 'primary';
   const res = await calendar.events.insert({
-    calendarId: 'primary',
+    calendarId: targetCalendarId,
     requestBody: { summary, start, end },
   });
-  return { ...res.data, calendarId: 'primary' };
+  return { ...res.data, calendarId: targetCalendarId };
 }
 
 async function deleteEvent(authClient, calendarId, eventId) {
@@ -56,4 +73,14 @@ async function deleteEvent(authClient, calendarId, eventId) {
   await calendar.events.delete({ calendarId, eventId });
 }
 
-module.exports = { listEvents, updateEvent, createEvent, deleteEvent };
+// Calendars the user can create/edit events on (owner or writer access).
+async function listWritableCalendars(authClient) {
+  const calendar = google.calendar({ version: 'v3', auth: authClient });
+  const res = await calendar.calendarList.list();
+  const items = res.data.items || [];
+  return items
+    .filter((cal) => cal.accessRole === 'owner' || cal.accessRole === 'writer')
+    .map((cal) => ({ id: cal.id, summary: cal.summary, primary: !!cal.primary }));
+}
+
+module.exports = { listEvents, updateEvent, createEvent, deleteEvent, listWritableCalendars };

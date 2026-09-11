@@ -15,6 +15,9 @@ contextBridge.exposeInMainWorld('hermannAPI', {
   updateEvent: (calendarId, eventId, updates) => ipcRenderer.invoke('calendar:update', calendarId, eventId, updates),
   createEvent: (eventData) => ipcRenderer.invoke('calendar:create', eventData),
   deleteEvent: (calendarId, eventId) => ipcRenderer.invoke('calendar:delete', calendarId, eventId),
+  listCalendars: () => ipcRenderer.invoke('calendar:listCalendars'),
+  getLastCalendarId: () => ipcRenderer.invoke('settings:getLastCalendarId'),
+  setLastCalendarId: (calendarId) => ipcRenderer.send('settings:setLastCalendarId', calendarId),
 
   getSplitRatio: () => ipcRenderer.invoke('layout:getSplitRatio'),
   setSplitRatio: (ratio) => ipcRenderer.send('layout:setSplitRatio', ratio),
