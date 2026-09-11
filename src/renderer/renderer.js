@@ -115,6 +115,7 @@ function dateKeyFromEvent(event) {
 }
 
 const HOLIDAY_COLOR = '#ef4444';
+const OBSERVANCE_COLOR = '#f97316';
 const DEFAULT_EVENT_COLOR = '#4a6cf7';
 
 function hexToRgba(hex, alpha) {
@@ -128,16 +129,32 @@ function hexToRgba(hex, alpha) {
 }
 
 function getEventColor(event) {
-  if (event.calendarIsHoliday) return HOLIDAY_COLOR;
+  if (event.calendarIsHoliday) return event.isActualDayOff ? HOLIDAY_COLOR : OBSERVANCE_COLOR;
   return event.calendarBackgroundColor || DEFAULT_EVENT_COLOR;
+}
+
+// Distinct legend entries for a holiday calendar's two sub-types (actual day
+// off vs. commemorative-only), keyed separately from its plain calendarId so
+// both can show up together when a month has both kinds of holiday event.
+function legendKeyForEvent(event) {
+  if (event.calendarIsHoliday) return `holiday:${event.isActualDayOff ? 'off' : 'obs'}`;
+  return `cal:${event.calendarId}`;
+}
+
+function legendLabelForEvent(event) {
+  const name = event.calendarSummary || event.calendarId;
+  if (event.calendarIsHoliday) return event.isActualDayOff ? `${name} (휴무)` : `${name} (기념일)`;
+  return name;
 }
 
 function updateCalendarLegend(events) {
   const seen = new Map();
   for (const event of events) {
-    if (!event.calendarId || seen.has(event.calendarId)) continue;
-    seen.set(event.calendarId, {
-      name: event.calendarSummary || event.calendarId,
+    if (!event.calendarId) continue;
+    const key = legendKeyForEvent(event);
+    if (seen.has(key)) continue;
+    seen.set(key, {
+      name: legendLabelForEvent(event),
       color: getEventColor(event),
     });
   }

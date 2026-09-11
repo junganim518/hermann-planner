@@ -8,6 +8,16 @@ function isHolidayCalendar(cal) {
   return cal.accessRole === 'reader' && (/휴일|holiday/i.test(cal.summary || '') || /holiday/i.test(cal.id || ''));
 }
 
+// Within Google's Korean holiday calendar, an event's `description` reliably
+// says "공휴일" (statutory holiday, an actual day off) or "기념일"
+// (commemorative day only, e.g. 국군의날/식목일 - offices stay open). Other
+// locales' holiday calendars don't set this, so anything else defaults to
+// being treated as a real day off rather than silently miscategorized.
+function isActualDayOff(event) {
+  const firstLine = (event.description || '').split('\n')[0].trim();
+  return firstLine !== '기념일';
+}
+
 // Returns upcoming events between timeMin and timeMax (ISO strings) across
 // all of the user's writable calendars, merged and sorted by start time.
 async function listEvents(authClient, timeMin, timeMax) {
@@ -26,16 +36,18 @@ async function listEvents(authClient, timeMin, timeMax) {
           singleEvents: true,
           orderBy: 'startTime',
         })
-        .then((res) =>
-          (res.data.items || []).map((event) => ({
+        .then((res) => {
+          const holidayCal = isHolidayCalendar(cal);
+          return (res.data.items || []).map((event) => ({
             ...event,
             calendarId: cal.id,
             calendarSummary: cal.summary,
             calendarColorId: cal.colorId,
             calendarBackgroundColor: cal.backgroundColor,
-            calendarIsHoliday: isHolidayCalendar(cal),
-          }))
-        )
+            calendarIsHoliday: holidayCal,
+            isActualDayOff: holidayCal ? isActualDayOff(event) : null,
+          }));
+        })
         .catch(() => [])
     )
   );
