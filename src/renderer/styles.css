@@ -263,6 +263,12 @@ html, body {
   filter: brightness(1.3);
 }
 
+.day-event-observance {
+  background: transparent;
+  padding: 0 2px;
+  font-weight: 500;
+}
+
 .day-event-label {
   display: block;
   white-space: nowrap;
@@ -315,6 +321,10 @@ html, body {
   display: flex;
   align-items: center;
   gap: 5px;
+}
+
+.legend-item-text-only {
+  font-weight: 500;
 }
 
 .legend-dot {

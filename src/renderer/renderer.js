@@ -133,6 +133,13 @@ function getEventColor(event) {
   return event.calendarBackgroundColor || DEFAULT_EVENT_COLOR;
 }
 
+// A commemorative-only holiday (e.g. 국군의날) isn't a day off, so it's shown
+// as plain colored text with no background instead of a filled bar - only
+// actual holidays (and every other calendar's events) keep the solid color.
+function isObservanceOnly(event) {
+  return !!event.calendarIsHoliday && !event.isActualDayOff;
+}
+
 // Distinct legend entries for a holiday calendar's two sub-types (actual day
 // off vs. commemorative-only), keyed separately from its plain calendarId so
 // both can show up together when a month has both kinds of holiday event.
@@ -156,19 +163,27 @@ function updateCalendarLegend(events) {
     seen.set(key, {
       name: legendLabelForEvent(event),
       color: getEventColor(event),
+      textOnly: isObservanceOnly(event),
     });
   }
 
   calendarLegend.innerHTML = '';
-  for (const { name, color } of seen.values()) {
+  for (const { name, color, textOnly } of seen.values()) {
     const item = document.createElement('span');
     item.className = 'legend-item';
 
-    const dot = document.createElement('span');
-    dot.className = 'legend-dot';
-    dot.style.backgroundColor = color;
-    item.appendChild(dot);
-    item.appendChild(document.createTextNode(name));
+    if (textOnly) {
+      // Mirrors the calendar display: no color swatch, just colored text.
+      item.classList.add('legend-item-text-only');
+      item.style.color = color;
+      item.appendChild(document.createTextNode(name));
+    } else {
+      const dot = document.createElement('span');
+      dot.className = 'legend-dot';
+      dot.style.backgroundColor = color;
+      item.appendChild(dot);
+      item.appendChild(document.createTextNode(name));
+    }
 
     calendarLegend.appendChild(item);
   }
@@ -444,7 +459,12 @@ function renderMonthGrid(monthDate, events) {
       const evEl = document.createElement('div');
       evEl.className = 'day-event';
       evEl.title = event.summary || '(제목 없음)';
-      evEl.style.backgroundColor = hexToRgba(getEventColor(event), 0.55) || 'rgba(74, 108, 247, 0.35)';
+      if (isObservanceOnly(event)) {
+        evEl.classList.add('day-event-observance');
+        evEl.style.color = getEventColor(event);
+      } else {
+        evEl.style.backgroundColor = hexToRgba(getEventColor(event), 0.55) || 'rgba(74, 108, 247, 0.35)';
+      }
 
       const evLabel = document.createElement('span');
       evLabel.className = 'day-event-label';
