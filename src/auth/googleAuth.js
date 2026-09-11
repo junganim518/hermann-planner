@@ -5,11 +5,19 @@ const { URL } = require('url');
 const { app, shell } = require('electron');
 const { google } = require('googleapis');
 
-// Scopes: read calendar events, and read/write tasks (needed for checkbox completion)
+// Scopes: read/write calendar events (readonly is not enough to patch events;
+// calendar.events alone would not cover calendarList.list(), which is used
+// to merge events across all of the user's calendars, so we need the full
+// calendar scope), and read/write tasks (needed for checkbox completion).
 const SCOPES = [
-  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/calendar',
   'https://www.googleapis.com/auth/tasks',
 ];
+
+// Bump this whenever SCOPES changes so previously saved tokens (granted
+// under the old, narrower scopes) are treated as invalid and re-auth is
+// forced instead of failing later with "Insufficient Permission".
+const SCOPE_VERSION = 2;
 
 function getUserDataPath(fileName) {
   return path.join(app.getPath('userData'), fileName);
@@ -42,14 +50,26 @@ function loadSavedToken() {
   const tokenPath = getUserDataPath('token.json');
   if (!fs.existsSync(tokenPath)) return null;
   try {
-    return JSON.parse(fs.readFileSync(tokenPath, 'utf-8'));
+    const token = JSON.parse(fs.readFileSync(tokenPath, 'utf-8'));
+    if (token.scopeVersion !== SCOPE_VERSION) {
+      // Granted under an older, narrower scope set (e.g. calendar.readonly) -
+      // discard it so getAuthorizedClient() re-runs the OAuth flow and the
+      // user re-consents to the current SCOPES instead of hitting
+      // "Insufficient Permission" on write calls.
+      clearSavedToken();
+      return null;
+    }
+    return token;
   } catch {
     return null;
   }
 }
 
 function saveToken(tokens) {
-  fs.writeFileSync(getUserDataPath('token.json'), JSON.stringify(tokens, null, 2));
+  fs.writeFileSync(
+    getUserDataPath('token.json'),
+    JSON.stringify({ ...tokens, scopeVersion: SCOPE_VERSION }, null, 2)
+  );
 }
 
 function clearSavedToken() {
