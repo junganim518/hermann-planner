@@ -248,6 +248,14 @@ html, body {
   opacity: 0.35;
 }
 
+/* Event colors (holiday red, per-calendar hues, white observance text) are
+   far more saturated than the day-number's muted gray, so they still read
+   as vivid even under the cell's own opacity - dim them further so their
+   tone matches the faded date. */
+.day-cell.other-month .day-event {
+  opacity: 0.5;
+}
+
 .day-cell.today {
   background: rgba(74, 108, 247, 0.25);
   border: 1px solid rgba(74, 108, 247, 0.6);
