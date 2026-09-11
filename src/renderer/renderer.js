@@ -115,7 +115,7 @@ function dateKeyFromEvent(event) {
 }
 
 const HOLIDAY_COLOR = '#ef4444';
-const OBSERVANCE_COLOR = '#f97316';
+const OBSERVANCE_COLOR = '#f2f2f5'; // matches the app's base text color
 const DEFAULT_EVENT_COLOR = '#4a6cf7';
 
 function hexToRgba(hex, alpha) {
