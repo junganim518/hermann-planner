@@ -44,6 +44,7 @@ async function listEvents(authClient, timeMin, timeMax) {
             calendarSummary: cal.summary,
             calendarColorId: cal.colorId,
             calendarBackgroundColor: cal.backgroundColor,
+            calendarIsPrimary: !!cal.primary,
             calendarIsHoliday: holidayCal,
             isActualDayOff: holidayCal ? isActualDayOff(event) : null,
           }));

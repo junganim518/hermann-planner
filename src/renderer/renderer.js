@@ -165,8 +165,18 @@ function legendKeyForEvent(event) {
   return `cal:${event.calendarId}`;
 }
 
+// The user's own primary calendar is named after their Google account, e.g.
+// "someone@gmail.com" - display-only substitution so the legend/dropdown
+// read "내 일정" instead of exposing the email address. Doesn't touch
+// calendarId, which is what actually drives API calls.
+const EMAIL_LIKE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function displayCalendarName(summary, primary) {
+  if (primary || EMAIL_LIKE.test(summary || '')) return '내 일정';
+  return summary;
+}
+
 function legendLabelForEvent(event) {
-  const name = event.calendarSummary || event.calendarId;
+  const name = displayCalendarName(event.calendarSummary, event.calendarIsPrimary) || event.calendarId;
   if (event.calendarIsHoliday) return event.isActualDayOff ? `${name} (휴무)` : `${name} (기념일)`;
   return name;
 }
@@ -234,7 +244,8 @@ function populateCalendarSelect(selectEl, selectedId) {
   for (const cal of cachedCalendars) {
     const opt = document.createElement('option');
     opt.value = cal.id;
-    opt.textContent = cal.primary ? `${cal.summary} (기본)` : cal.summary;
+    const name = displayCalendarName(cal.summary, cal.primary);
+    opt.textContent = cal.primary ? `${name} (기본)` : name;
     selectEl.appendChild(opt);
   }
   if (selectedId && cachedCalendars.some((cal) => cal.id === selectedId)) {
