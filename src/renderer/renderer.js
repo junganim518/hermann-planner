@@ -146,7 +146,10 @@ function hexToRgba(hex, alpha) {
 }
 
 function getEventColor(event) {
-  if (event.calendarIsHoliday) return event.isActualDayOff ? HOLIDAY_COLOR : OBSERVANCE_COLOR;
+  if (event.calendarIsHoliday) {
+    if (!event.isActualDayOff) return OBSERVANCE_COLOR;
+    return event.calendarBackgroundColor || HOLIDAY_COLOR;
+  }
   return event.calendarBackgroundColor || DEFAULT_EVENT_COLOR;
 }
 
