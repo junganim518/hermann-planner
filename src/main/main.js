@@ -1,5 +1,5 @@
 const path = require('path');
-const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, shell } = require('electron');
 const windowStateKeeper = require('electron-window-state');
 const Store = require('electron-store');
 const { getAuthorizedClient, isLoggedIn, logout } = require('../auth/googleAuth');
@@ -207,6 +207,16 @@ if (!gotSingleInstanceLock) {
 
   ipcMain.on('layout:setSplitRatio', (event, ratio) => {
     store.set('splitRatio', ratio);
+  });
+
+  const ALLOWED_EXTERNAL_URLS = new Set([
+    'https://calendar.google.com/calendar/r',
+    'https://tasks.google.com/tasks/',
+  ]);
+  ipcMain.on('external:open', (event, url) => {
+    if (typeof url === 'string' && ALLOWED_EXTERNAL_URLS.has(url)) {
+      shell.openExternal(url);
+    }
   });
 
   ipcMain.on('widget:close', () => {

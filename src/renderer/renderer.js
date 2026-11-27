@@ -777,6 +777,11 @@ document.addEventListener('visibilitychange', () => {
   if (loggedInState && !isUserBusy()) refreshAll();
 });
 
+document.getElementById('btn-open-gcal').addEventListener('click', () =>
+  window.hermannAPI.openExternal('https://calendar.google.com/calendar/r'));
+document.getElementById('btn-open-gtasks').addEventListener('click', () =>
+  window.hermannAPI.openExternal('https://tasks.google.com/tasks/'));
+
 btnRefresh.addEventListener('click', async () => {
   btnRefresh.disabled = true;
   btnRefresh.classList.add('spinning');
